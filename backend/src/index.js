@@ -4,6 +4,7 @@ import cors from 'cors';
 
 import authRoutes from './routes/auth.js';
 import specRoutes from './routes/specs.js';
+import catalogueRoutes from './routes/catalogue.js';
 import { errorHandler } from './middleware/error.js';
 
 const app = express();
@@ -36,6 +37,7 @@ app.get('/api/health', (req, res) => {
 
 app.use('/api/v1/auth', authRoutes);
 app.use('/api/v1/specs', specRoutes);
+app.use('/api/v1/catalogue', catalogueRoutes);
 
 app.use(errorHandler);
 

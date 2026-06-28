@@ -1,5 +1,7 @@
-import { Routes, Route, Navigate, Link, useNavigate } from 'react-router-dom';
+import { Routes, Route, Navigate, Link, Outlet, useNavigate } from 'react-router-dom';
 import { useAuth } from './context/AuthContext.jsx';
+import { SpecsProvider } from './context/SpecsContext.jsx';
+import Sidebar from './components/Sidebar.jsx';
 import Login from './pages/Login.jsx';
 import Register from './pages/Register.jsx';
 import Dashboard from './pages/Dashboard.jsx';
@@ -21,10 +23,21 @@ function TopBar() {
   );
 }
 
-function Protected({ children }) {
+/** Layout for the authenticated area: persistent sidebar + routed content. */
+function ProtectedLayout() {
   const { user, ready } = useAuth();
   if (!ready) return null;
-  return user ? children : <Navigate to="/login" replace />;
+  if (!user) return <Navigate to="/login" replace />;
+  return (
+    <SpecsProvider>
+      <div className="app-shell">
+        <Sidebar />
+        <main className="app-main">
+          <Outlet />
+        </main>
+      </div>
+    </SpecsProvider>
+  );
 }
 
 export default function App() {
@@ -34,8 +47,10 @@ export default function App() {
       <Routes>
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
-        <Route path="/" element={<Protected><Dashboard /></Protected>} />
-        <Route path="/specs/:id" element={<Protected><SpecEditor /></Protected>} />
+        <Route element={<ProtectedLayout />}>
+          <Route path="/" element={<Dashboard />} />
+          <Route path="/specs/:id" element={<SpecEditor />} />
+        </Route>
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </>

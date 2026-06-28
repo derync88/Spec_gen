@@ -51,8 +51,24 @@ export const api = {
   getSpec: (id) => request(`/specs/${id}`),
   updateSpec: (id, b) => request(`/specs/${id}`, { method: 'PUT', body: b }),
   deleteSpec: (id) => request(`/specs/${id}`, { method: 'DELETE' }),
-  reviewSpec: (id) => request(`/specs/${id}/review`, { method: 'POST' }),
-  rewriteSpec: (id) => request(`/specs/${id}/rewrite`, { method: 'POST' }),
+  getQuestions: (id) => request(`/specs/${id}/questions`, { method: 'POST' }),
+  reviewSpec: (id, b) => request(`/specs/${id}/review`, { method: 'POST', body: b }),
+  rewriteSpec: (id, b) => request(`/specs/${id}/rewrite`, { method: 'POST', body: b }),
+  listVersions: (id) => request(`/specs/${id}/versions`),
+  getVersion: (id, vid) => request(`/specs/${id}/versions/${vid}`),
+  revertVersion: (id, vid) =>
+    request(`/specs/${id}/versions/${vid}/revert`, { method: 'POST' }),
+
+  // Catalogue (Phase 2): archetypes + blueprints, Mode B classification.
+  getCatalogue: () => request('/catalogue'),
+  // Live, zero-LLM keyword lookup used by the draft editor as the user types.
+  matchCatalogue: (b) => request('/catalogue/match', { method: 'POST', body: b }),
+  // Existing-project deep-read: derive stack + already-delivered requirements.
+  ingestRepo: (id) => request(`/specs/${id}/ingest-repo`, { method: 'POST' }),
+  classifySpec: (id, b) => request(`/specs/${id}/classify`, { method: 'POST', body: b }),
+  getSpecArchetypes: (id) => request(`/specs/${id}/archetypes`),
+  decideArchetype: (id, archetypeId, status) =>
+    request(`/specs/${id}/archetypes/${archetypeId}`, { method: 'PATCH', body: { status } }),
 
   // Fetch an exported markdown file (auth header required) and trigger a download.
   // kind: 'export' = review report, 'export-spec' = rewritten structured spec.

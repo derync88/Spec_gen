@@ -7,7 +7,10 @@
   "scripts": {
     "dev": "kill -9 $(lsof -ti:4000) 2>/dev/null; node --watch src/index.js",
     "start": "node src/index.js",
-    "migrate": "node src/db/migrate.js"
+    "migrate": "node src/db/migrate.js",
+    "seed:catalogue": "node src/db/seedCatalogue.js",
+    "lint": "eslint src",
+    "test": "node --test"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.65.0",
@@ -19,5 +22,10 @@
     "multer": "^2.0.0",
     "openai": "^4.104.0",
     "pg": "^8.13.1"
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "eslint": "^10.6.0",
+    "globals": "^17.7.0"
   }
 }

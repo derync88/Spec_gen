@@ -1,0 +1,1391 @@
+{
+  "version": "2026-06-28",
+  "source": "Transcribed from spec-generator-service-catalogue.md, spec-generator-catalogue-audit.md, and spec-generator-prescription-dial.md. This file is DATA: improving an archetype requires editing this file and re-running `npm run seed:catalogue` — no application code change (NFR-C4).",
+  "archetypes": [
+    {
+      "id": "foundation.identity",
+      "layer": "foundation", "axis": "quality", "name": "Identity & Access",
+      "user_says": ["users can sign in", "people log in to accounts"],
+      "classifier_hints": ["login", "log in", "sign in", "sign up", "register", "registration", "password", "authentication", "auth", "account", "session", "sso", "oidc", "mfa", "email verification", "account recovery"],
+      "brings_fr": [
+        { "text": "Registration, login, and logout are supported.", "default_prescription": "silent-default", "checkability": "High" },
+        { "text": "Password reset and account recovery are supported.", "default_prescription": "advisory", "checkability": "High" },
+        { "text": "Session lifecycle (issue, refresh, expiry) is defined.", "default_prescription": "advisory", "checkability": "High" },
+        { "text": "Email verification is required before privileged actions.", "default_prescription": "advisory", "checkability": "High" }
+      ],
+      "leans_nfr": ["Security", "Privacy", "Reliability"],
+      "watch_for": [
+        { "text": "Token expiry/refresh and account lockout handled.", "prescription": "constraint" },
+        { "text": "Permission checks on every endpoint, not just the UI.", "prescription": "constraint" },
+        { "text": "Deletion vs deactivation distinguished.", "prescription": "advisory" }
+      ],
+      "composes_with": ["foundation.tenancy", "foundation.audit", "foundation.authorisation"],
+      "requires": [],
+      "signals": { "surfaces": ["ui"], "touches": ["auth", "pii"], "data_classification": "personal" },
+      "checkability": "High", "default_prescription": "silent-default",
+      "prescription_overrides": [
+        { "item": "permission check on every endpoint", "level": "constraint" },
+        { "item": "secure session/token handling", "level": "constraint" },
+        { "item": "library choice, login flow conventions", "level": "silent-default" }
+      ],
+      "maturity": "battle-tested"
+    },
+    {
+      "id": "foundation.authorisation",
+      "layer": "foundation", "axis": "quality", "name": "Authorisation & access control",
+      "user_says": ["control what each user can do", "different roles see different things"],
+      "classifier_hints": ["authorisation", "authorization", "authz", "permission", "permissions", "role", "roles", "rbac", "abac", "access control", "least privilege", "admins can", "only admins"],
+      "brings_fr": [
+        { "text": "A permission model (RBAC/ABAC) governs access to resources.", "default_prescription": "advisory", "checkability": "High" },
+        { "text": "Access is denied by default and granted explicitly.", "default_prescription": "constraint", "checkability": "High" },
+        { "text": "Per-resource permission checks are enforced server-side.", "default_prescription": "constraint", "checkability": "High" }
+      ],
+      "leans_nfr": ["Security", "Compliance"],
+      "watch_for": [
+        { "text": "Authorisation enforced server-side on every endpoint, not just hidden in UI.", "prescription": "constraint" },
+        { "text": "Permission changes take effect on live sessions.", "prescription": "constraint" },
+        { "text": "Role explosion is avoided.", "prescription": "advisory" }
+      ],
+      "composes_with": ["foundation.audit"],
+      "requires": ["foundation.identity"],
+      "signals": { "surfaces": [], "touches": ["auth"], "data_classification": "none" },
+      "checkability": "High", "default_prescription": "constraint",
+      "prescription_overrides": [
+        { "item": "server-side enforcement everywhere", "level": "constraint" },
+        { "item": "deny-by-default", "level": "constraint" },
+        { "item": "permission change applies to live sessions", "level": "constraint" },
+        { "item": "role-model shape (RBAC/ABAC)", "level": "advisory" }
+      ],
+      "maturity": "battle-tested"
+    },
+    {
+      "id": "foundation.tenancy",
+      "layer": "foundation", "axis": "quality", "name": "Tenancy & org model",
+      "user_says": ["separate companies/teams keep their data apart"],
+      "classifier_hints": ["tenant", "tenancy", "multi-tenant", "organisation", "organization", "workspace", "team", "company", "data isolation", "per-org"],
+      "brings_fr": [
+        { "text": "Org/workspace creation and member invitation are supported.", "default_prescription": "advisory", "checkability": "High" },
+        { "text": "A data-isolation boundary separates tenants.", "default_prescription": "constraint", "checkability": "High" }
+      ],
+      "leans_nfr": ["Security", "Maintainability"],
+      "watch_for": [
+        { "text": "Cross-tenant data leakage is prevented (the #1 platform security bug).", "prescription": "constraint" },
+        { "text": "Isolation strategy (row/schema/DB) is chosen.", "prescription": "advisory" },
+        { "text": "A user may belong to many orgs.", "prescription": "advisory" }
+      ],
+      "composes_with": [],
+      "requires": ["foundation.identity"],
+      "signals": { "surfaces": [], "touches": ["auth"], "data_classification": "none" },
+      "checkability": "High", "default_prescription": "constraint",
+      "prescription_overrides": [
+        { "item": "cross-tenant isolation (no leakage)", "level": "constraint" },
+        { "item": "isolation strategy (row/schema/DB)", "level": "advisory" }
+      ],
+      "maturity": "battle-tested"
+    },
+    {
+      "id": "foundation.data-layer",
+      "layer": "foundation", "axis": "quality", "name": "Data layer & persistence",
+      "user_says": ["the system remembers things"],
+      "classifier_hints": ["database", "store data", "persistence", "schema", "entities", "records", "migration", "save", "stored"],
+      "brings_fr": [
+        { "text": "Entity contracts and schema are defined.", "default_prescription": "advisory", "checkability": "High" },
+        { "text": "A migration strategy (expand/contract) is defined.", "default_prescription": "advisory", "checkability": "High" }
+      ],
+      "leans_nfr": ["Reliability", "Data quality", "Performance"],
+      "watch_for": [
+        { "text": "Referential integrity is maintained.", "prescription": "constraint" },
+        { "text": "Migration rollback is possible.", "prescription": "constraint" },
+        { "text": "Soft vs hard delete and PII retention are decided.", "prescription": "advisory" }
+      ],
+      "composes_with": ["foundation.data-architecture"],
+      "requires": [],
+      "signals": { "surfaces": [], "touches": ["data"], "data_classification": "none" },
+      "checkability": "High", "default_prescription": "advisory",
+      "prescription_overrides": [
+        { "item": "referential integrity", "level": "constraint" },
+        { "item": "migration rollback", "level": "constraint" },
+        { "item": "schema conventions, naming", "level": "silent-default" }
+      ],
+      "maturity": "battle-tested"
+    },
+    {
+      "id": "foundation.data-architecture",
+      "layer": "foundation", "axis": "quality", "name": "Data & analytics architecture",
+      "user_says": ["raw data becomes insight"],
+      "classifier_hints": ["analytics", "warehouse", "data lake", "etl", "olap", "oltp", "caching", "materialised view", "reporting database", "ingestion"],
+      "brings_fr": [
+        { "text": "OLTP and OLAP workloads are separated.", "default_prescription": "advisory", "checkability": "Mixed" },
+        { "text": "A caching strategy with invalidation is defined.", "default_prescription": "advisory", "checkability": "Mixed" }
+      ],
+      "leans_nfr": ["Performance", "Data quality", "Cost"],
+      "watch_for": [
+        { "text": "Analytics does not run on the transactional database.", "prescription": "advisory" },
+        { "text": "No PII enters the analytics store without a basis.", "prescription": "constraint" }
+      ],
+      "composes_with": ["foundation.data-layer", "surface.dashboard", "surface.reporting"],
+      "requires": ["foundation.data-layer"],
+      "signals": { "surfaces": [], "touches": ["data", "pii"], "data_classification": "personal" },
+      "checkability": "Mixed", "default_prescription": "advisory",
+      "prescription_overrides": [
+        { "item": "no PII in the analytics store without basis", "level": "constraint" }
+      ],
+      "maturity": "mature"
+    },
+    {
+      "id": "foundation.api-contract",
+      "layer": "foundation", "axis": "quality", "name": "API / contract layer",
+      "user_says": ["all the devices talk to one backend"],
+      "classifier_hints": ["api", "endpoint", "rest", "graphql", "contract", "dto", "request response", "versioning", "pagination", "error envelope"],
+      "brings_fr": [
+        { "text": "Endpoint contracts and request/response shapes are defined.", "default_prescription": "silent-default", "checkability": "High" },
+        { "text": "A versioning policy is stated.", "default_prescription": "advisory", "checkability": "High" }
+      ],
+      "leans_nfr": ["Compatibility", "Maintainability"],
+      "watch_for": [
+        { "text": "One contract serves all clients (web + mobile).", "prescription": "advisory" },
+        { "text": "Error shape is consistent across endpoints.", "prescription": "advisory" }
+      ],
+      "composes_with": [],
+      "requires": [],
+      "signals": { "surfaces": [], "touches": ["api"], "data_classification": "none" },
+      "checkability": "High", "default_prescription": "silent-default",
+      "prescription_overrides": [
+        { "item": "versioning policy", "level": "advisory" },
+        { "item": "error envelope, pagination convention", "level": "silent-default" }
+      ],
+      "maturity": "battle-tested"
+    },
+    {
+      "id": "foundation.external-api",
+      "layer": "foundation", "axis": "quality", "name": "External / partner API surface",
+      "user_says": ["other developers/systems integrate with us"],
+      "classifier_hints": ["public api", "partner api", "api gateway", "api keys", "oauth clients", "rate limit", "quota", "openapi", "sdk", "developer portal", "sandbox"],
+      "brings_fr": [
+        { "text": "API keys/OAuth clients authenticate external callers.", "default_prescription": "advisory", "checkability": "High" },
+        { "text": "Rate limiting and quotas are applied per client.", "default_prescription": "constraint", "checkability": "High" }
+      ],
+      "leans_nfr": ["Compatibility", "Security", "Maintainability"],
+      "watch_for": [
+        { "text": "Versioning precedes breaking changes; deprecation is communicated.", "prescription": "advisory" },
+        { "text": "Key rotation is supported.", "prescription": "constraint" }
+      ],
+      "composes_with": ["surface.marketplace"],
+      "requires": ["foundation.api-contract", "foundation.authorisation"],
+      "signals": { "surfaces": [], "touches": ["api", "auth", "external"], "data_classification": "none" },
+      "checkability": "High", "default_prescription": "advisory",
+      "prescription_overrides": [
+        { "item": "rate limiting", "level": "constraint" },
+        { "item": "key rotation", "level": "constraint" },
+        { "item": "authz on every endpoint", "level": "constraint" },
+        { "item": "SDK, docs, sandbox", "level": "advisory" }
+      ],
+      "maturity": "mature"
+    },
+    {
+      "id": "foundation.sync-offline",
+      "layer": "foundation", "axis": "quality", "name": "Sync & offline",
+      "user_says": ["works on my phone with no signal, then catches up"],
+      "classifier_hints": ["offline", "sync", "synchronise", "local cache", "conflict resolution", "optimistic update", "no signal", "background sync"],
+      "brings_fr": [
+        { "text": "A local cache and change queue support offline use.", "default_prescription": "advisory", "checkability": "High" },
+        { "text": "A conflict-resolution policy is chosen and stated.", "default_prescription": "constraint", "checkability": "Mixed" }
+      ],
+      "leans_nfr": ["Reliability", "Compatibility", "Interaction"],
+      "watch_for": [
+        { "text": "Conflict resolution (last-write-wins/merge/prompt) is decided to avoid silent data loss.", "prescription": "constraint" },
+        { "text": "Offline UX states are designed.", "prescription": "advisory" }
+      ],
+      "composes_with": ["device.pwa", "device.native-mobile"],
+      "requires": [],
+      "signals": { "surfaces": ["ui"], "touches": ["data"], "data_classification": "none" },
+      "checkability": "Mixed", "default_prescription": "advisory",
+      "prescription_overrides": [
+        { "item": "a conflict-resolution policy is chosen and stated", "level": "constraint" },
+        { "item": "offline UX states", "level": "advisory" }
+      ],
+      "maturity": "mature"
+    },
+    {
+      "id": "foundation.eventing",
+      "layer": "foundation", "axis": "quality", "name": "Background processing & eventing",
+      "user_says": ["things happen in the background"],
+      "classifier_hints": ["queue", "job", "background", "async", "cron", "scheduled", "event bus", "pub sub", "pubsub", "webhook", "worker", "dead letter"],
+      "brings_fr": [
+        { "text": "An async job queue and scheduled tasks are supported.", "default_prescription": "advisory", "checkability": "Mixed" },
+        { "text": "Failed jobs are routed to dead-letter handling.", "default_prescription": "constraint", "checkability": "Mixed" }
+      ],
+      "leans_nfr": ["Reliability", "Performance", "Maintainability"],
+      "watch_for": [
+        { "text": "Consumers are idempotent (at-least-once delivery).", "prescription": "constraint" },
+        { "text": "Poison messages and ordering guarantees are handled.", "prescription": "advisory" }
+      ],
+      "composes_with": ["foundation.notifications", "operation.integration", "surface.workflow"],
+      "requires": [],
+      "signals": { "surfaces": [], "touches": ["data"], "data_classification": "none" },
+      "checkability": "Mixed", "default_prescription": "advisory",
+      "prescription_overrides": [
+        { "item": "idempotent consumers", "level": "constraint" },
+        { "item": "dead-letter handling for failed jobs", "level": "constraint" },
+        { "item": "ordering guarantees, retry tuning", "level": "advisory" }
+      ],
+      "maturity": "mature"
+    },
+    {
+      "id": "foundation.notifications",
+      "layer": "foundation", "axis": "quality", "name": "Notifications",
+      "user_says": ["tell users when something happens"],
+      "classifier_hints": ["notification", "notify", "push", "email", "sms", "alert", "in-app inbox", "preferences", "opt-out", "unsubscribe"],
+      "brings_fr": [
+        { "text": "Push, email, and in-app delivery channels are supported.", "default_prescription": "advisory", "checkability": "Mixed" },
+        { "text": "Users can set notification preferences and opt out.", "default_prescription": "advisory", "checkability": "High" }
+      ],
+      "leans_nfr": ["Reliability", "Privacy", "Compatibility"],
+      "watch_for": [
+        { "text": "Consent and a working unsubscribe are provided (legal).", "prescription": "constraint" },
+        { "text": "Channels are deduped; quiet hours respected.", "prescription": "advisory" }
+      ],
+      "composes_with": ["surface.notification-centre"],
+      "requires": [],
+      "signals": { "surfaces": ["ui"], "touches": ["pii"], "data_classification": "personal" },
+      "checkability": "Mixed", "default_prescription": "advisory",
+      "prescription_overrides": [
+        { "item": "consent + working unsubscribe", "level": "constraint" },
+        { "item": "dedupe, quiet hours", "level": "advisory" }
+      ],
+      "maturity": "battle-tested"
+    },
+    {
+      "id": "foundation.storage",
+      "layer": "foundation", "axis": "quality", "name": "File & media storage",
+      "user_says": ["users upload photos/documents"],
+      "classifier_hints": ["upload", "file", "files", "media", "image", "photo", "document", "attachment", "storage", "cdn", "thumbnail"],
+      "brings_fr": [
+        { "text": "Users can upload files with access control on retrieval.", "default_prescription": "constraint", "checkability": "High" },
+        { "text": "Thumbnails/transforms and CDN delivery are supported.", "default_prescription": "advisory", "checkability": "High" }
+      ],
+      "leans_nfr": ["Security", "Performance", "Privacy"],
+      "watch_for": [
+        { "text": "File-type validation is enforced.", "prescription": "constraint" },
+        { "text": "Signed URLs and orphaned-file cleanup are handled.", "prescription": "advisory" }
+      ],
+      "composes_with": [],
+      "requires": [],
+      "signals": { "surfaces": ["ui"], "touches": ["files"], "data_classification": "none" },
+      "checkability": "High", "default_prescription": "advisory",
+      "prescription_overrides": [
+        { "item": "file-type validation", "level": "constraint" },
+        { "item": "access control on retrieval", "level": "constraint" },
+        { "item": "thumbnails, CDN", "level": "advisory" }
+      ],
+      "maturity": "battle-tested"
+    },
+    {
+      "id": "foundation.search",
+      "layer": "foundation", "axis": "quality", "name": "Search",
+      "user_says": ["find anything quickly"],
+      "classifier_hints": ["search", "find", "query", "index", "filter", "facet", "ranking", "typeahead", "autocomplete", "typo tolerance"],
+      "brings_fr": [
+        { "text": "Indexed query with filters and facets is supported.", "default_prescription": "advisory", "checkability": "Mixed" },
+        { "text": "Results are permission-aware.", "default_prescription": "constraint", "checkability": "High" }
+      ],
+      "leans_nfr": ["Performance", "Functional Suitability"],
+      "watch_for": [
+        { "text": "Search respects permissions (never returns what the user can't see).", "prescription": "constraint" },
+        { "text": "Index freshness is managed.", "prescription": "advisory" }
+      ],
+      "composes_with": ["surface.search-results"],
+      "requires": [],
+      "signals": { "surfaces": ["ui"], "touches": ["data"], "data_classification": "none" },
+      "checkability": "Mixed", "default_prescription": "advisory",
+      "prescription_overrides": [
+        { "item": "permission-aware results", "level": "constraint" },
+        { "item": "ranking, typo tolerance", "level": "advisory" }
+      ],
+      "maturity": "mature"
+    },
+    {
+      "id": "foundation.audit",
+      "layer": "foundation", "axis": "quality", "name": "Audit & logging",
+      "user_says": ["we can see who did what"],
+      "classifier_hints": ["audit", "audit log", "audit trail", "who did what", "activity log", "history", "compliance log", "tamper"],
+      "brings_fr": [
+        { "text": "An immutable event log records actor, action, and timestamp.", "default_prescription": "advisory", "checkability": "High" },
+        { "text": "Audit records are queryable and exportable.", "default_prescription": "advisory", "checkability": "High" }
+      ],
+      "leans_nfr": ["Security", "Compliance"],
+      "watch_for": [
+        { "text": "No PII is written to logs; the audit trail is tamper-evident.", "prescription": "constraint" },
+        { "text": "Retention is defined.", "prescription": "advisory" }
+      ],
+      "composes_with": ["foundation.identity", "foundation.authorisation"],
+      "requires": [],
+      "signals": { "surfaces": [], "touches": ["pii"], "data_classification": "personal" },
+      "checkability": "High", "default_prescription": "advisory",
+      "prescription_overrides": [
+        { "item": "no PII in logs", "level": "constraint" },
+        { "item": "tamper-evident audit trail", "level": "constraint" },
+        { "item": "log format", "level": "silent-default" }
+      ],
+      "maturity": "battle-tested"
+    },
+    {
+      "id": "foundation.observability",
+      "layer": "foundation", "axis": "quality", "name": "Observability",
+      "user_says": ["we know when it breaks"],
+      "classifier_hints": ["observability", "metrics", "tracing", "health check", "readiness", "alerting", "monitoring", "structured logs"],
+      "brings_fr": [
+        { "text": "Health and readiness checks are exposed.", "default_prescription": "advisory", "checkability": "High" },
+        { "text": "Metrics, traces, and structured logs are emitted.", "default_prescription": "silent-default", "checkability": "High" }
+      ],
+      "leans_nfr": ["Reliability", "Maintainability"],
+      "watch_for": [
+        { "text": "Observability is seeded by default (the most-skipped foundation).", "prescription": "advisory" }
+      ],
+      "composes_with": [],
+      "requires": [],
+      "signals": { "surfaces": [], "touches": [], "data_classification": "none" },
+      "checkability": "High", "default_prescription": "silent-default",
+      "prescription_overrides": [
+        { "item": "health/readiness checks exist", "level": "advisory" }
+      ],
+      "maturity": "battle-tested"
+    },
+    {
+      "id": "foundation.config",
+      "layer": "foundation", "axis": "quality", "name": "Configuration & feature flags",
+      "user_says": ["turn features on/off without redeploying"],
+      "classifier_hints": ["feature flag", "feature toggle", "config", "configuration", "gradual rollout", "environment config"],
+      "brings_fr": [
+        { "text": "A flag store enables/disables features without redeploying.", "default_prescription": "silent-default", "checkability": "High" }
+      ],
+      "leans_nfr": ["Maintainability"],
+      "watch_for": [],
+      "composes_with": ["delivery.release-strategy"],
+      "requires": [],
+      "signals": { "surfaces": [], "touches": [], "data_classification": "none" },
+      "checkability": "High", "default_prescription": "silent-default",
+      "prescription_overrides": [],
+      "maturity": "battle-tested"
+    },
+    {
+      "id": "foundation.billing",
+      "layer": "foundation", "axis": "quality", "name": "Billing & subscriptions",
+      "user_says": ["users pay / partners subscribe"],
+      "classifier_hints": ["billing", "payment", "pay", "subscription", "subscribe", "plan", "invoice", "checkout", "stripe", "pricing", "entitlement", "tax", "gst"],
+      "brings_fr": [
+        { "text": "Plans, payment-provider integration, and invoicing are supported.", "default_prescription": "advisory", "checkability": "Mixed" },
+        { "text": "Entitlements are enforced server-side.", "default_prescription": "constraint", "checkability": "High" }
+      ],
+      "leans_nfr": ["Security", "Reliability", "Compliance"],
+      "watch_for": [
+        { "text": "Tax/GST correctness is ensured.", "prescription": "constraint" },
+        { "text": "Failed-payment recovery and proration are handled.", "prescription": "advisory" }
+      ],
+      "composes_with": ["surface.marketplace"],
+      "requires": ["foundation.identity"],
+      "signals": { "surfaces": ["ui"], "touches": ["payment", "pii"], "data_classification": "personal" },
+      "checkability": "Mixed", "default_prescription": "advisory",
+      "prescription_overrides": [
+        { "item": "entitlement enforced server-side", "level": "constraint" },
+        { "item": "tax/GST correctness", "level": "constraint" },
+        { "item": "proration, dunning", "level": "advisory" }
+      ],
+      "maturity": "mature"
+    },
+
+    {
+      "id": "surface.onboarding",
+      "layer": "surface", "axis": "product-surface", "name": "Onboarding / signup flow",
+      "user_says": ["new users get set up"],
+      "classifier_hints": ["onboarding", "signup flow", "getting started", "guided setup", "first run", "welcome", "progressive profiling", "empty state"],
+      "brings_fr": [
+        { "text": "Account creation with guided setup and progress indication.", "default_prescription": "advisory", "checkability": "Mixed" },
+        { "text": "Empty first-run state is seeded.", "default_prescription": "advisory", "checkability": "Mixed" }
+      ],
+      "leans_nfr": ["Interaction", "Accessibility"],
+      "watch_for": [
+        { "text": "Abandonment/resume and skip-and-return are handled.", "prescription": "advisory" }
+      ],
+      "composes_with": ["foundation.identity"],
+      "requires": [],
+      "signals": { "surfaces": ["ui"], "touches": ["pii"], "data_classification": "personal" },
+      "checkability": "Mixed", "default_prescription": "advisory",
+      "prescription_overrides": [],
+      "maturity": "battle-tested"
+    },
+    {
+      "id": "surface.dashboard",
+      "layer": "surface", "axis": "product-surface", "name": "Dashboard / analytics view",
+      "user_says": ["see key numbers at a glance"],
+      "classifier_hints": ["dashboard", "metrics view", "charts", "kpi", "tiles", "at a glance", "drill down", "date range"],
+      "brings_fr": [
+        { "text": "Metric tiles and charts with a date-range filter and drill-down.", "default_prescription": "advisory", "checkability": "Mixed" }
+      ],
+      "leans_nfr": ["Performance", "Interaction", "Accessibility"],
+      "watch_for": [
+        { "text": "Empty/loading/error/stale states exist for every widget.", "prescription": "advisory" },
+        { "text": "Query-performance budget and aggregate timezone are defined.", "prescription": "advisory" }
+      ],
+      "composes_with": ["surface.reporting", "foundation.data-layer"],
+      "requires": [],
+      "signals": { "surfaces": ["ui"], "touches": ["data"], "data_classification": "none" },
+      "checkability": "Mixed", "default_prescription": "advisory",
+      "prescription_overrides": [],
+      "maturity": "battle-tested"
+    },
+    {
+      "id": "surface.crud-admin",
+      "layer": "surface", "axis": "product-surface", "name": "CRUD admin / management console",
+      "user_says": ["manage the records", "admins manage users"],
+      "classifier_hints": ["crud", "manage records", "admin console", "management console", "create read update delete", "bulk actions", "manage users", "manage user", "user management", "manage accounts", "admins", "back office"],
+      "brings_fr": [
+        { "text": "Create/read/update/delete/list per entity with validation.", "default_prescription": "advisory", "checkability": "High" },
+        { "text": "Permissions are enforced per operation.", "default_prescription": "constraint", "checkability": "High" }
+      ],
+      "leans_nfr": ["Security", "Functional Suitability"],
+      "watch_for": [
+        { "text": "Per-operation permissions, not just per-screen.", "prescription": "constraint" },
+        { "text": "Optimistic-concurrency conflicts and cascade-delete behaviour handled.", "prescription": "advisory" }
+      ],
+      "composes_with": ["foundation.authorisation", "foundation.audit"],
+      "requires": [],
+      "signals": { "surfaces": ["ui"], "touches": ["data", "auth"], "data_classification": "none" },
+      "checkability": "High", "default_prescription": "advisory",
+      "prescription_overrides": [
+        { "item": "per-operation authorisation", "level": "constraint" }
+      ],
+      "maturity": "battle-tested"
+    },
+    {
+      "id": "surface.list-detail",
+      "layer": "surface", "axis": "product-surface", "name": "List + detail (master–detail)",
+      "user_says": ["browse a list, click into one"],
+      "classifier_hints": ["list", "list view", "detail view", "master detail", "browse", "pagination", "sort", "filter", "table of"],
+      "brings_fr": [
+        { "text": "Paginated list with sort/filter and a deep-linkable detail view.", "default_prescription": "advisory", "checkability": "High" }
+      ],
+      "leans_nfr": ["Performance", "Interaction"],
+      "watch_for": [
+        { "text": "Pagination/filter state in URL; empty and deleted-item states.", "prescription": "advisory" }
+      ],
+      "composes_with": [],
+      "requires": [],
+      "signals": { "surfaces": ["ui"], "touches": ["data"], "data_classification": "none" },
+      "checkability": "High", "default_prescription": "advisory",
+      "prescription_overrides": [],
+      "maturity": "battle-tested"
+    },
+    {
+      "id": "surface.workflow",
+      "layer": "surface", "axis": "product-surface", "name": "Workflow / multi-step process",
+      "user_says": ["something moves through stages"],
+      "classifier_hints": ["workflow", "stages", "status", "state machine", "approval", "multi-step process", "pipeline", "transition", "assign"],
+      "brings_fr": [
+        { "text": "A state model with transitions, guards, and status history.", "default_prescription": "advisory", "checkability": "High" },
+        { "text": "Notifications fire on transitions.", "default_prescription": "advisory", "checkability": "High" }
+      ],
+      "leans_nfr": ["Reliability", "Functional Suitability"],
+      "watch_for": [
+        { "text": "State-machine completeness: every transition incl. error, timeout, reversal.", "prescription": "advisory" },
+        { "text": "Transition authorisation (who may move what) is enforced.", "prescription": "constraint" }
+      ],
+      "composes_with": ["foundation.notifications", "foundation.audit"],
+      "requires": [],
+      "signals": { "surfaces": ["ui"], "touches": ["data"], "data_classification": "none" },
+      "checkability": "High", "default_prescription": "advisory",
+      "prescription_overrides": [
+        { "item": "transition authorisation (who may move what)", "level": "constraint" }
+      ],
+      "maturity": "battle-tested"
+    },
+    {
+      "id": "surface.forms",
+      "layer": "surface", "axis": "product-surface", "name": "Form / data capture & wizards",
+      "user_says": ["users fill in information"],
+      "classifier_hints": ["form", "forms", "data capture", "wizard", "fields", "validation", "multi-step form", "save draft", "questionnaire"],
+      "brings_fr": [
+        { "text": "Field validation with conditional fields and review-before-submit.", "default_prescription": "advisory", "checkability": "Mixed" },
+        { "text": "Multi-step forms support save-draft and resume.", "default_prescription": "advisory", "checkability": "Mixed" }
+      ],
+      "leans_nfr": ["Interaction", "Accessibility", "Data quality"],
+      "watch_for": [
+        { "text": "Accessible error messaging (labels, errors, focus order).", "prescription": "constraint" },
+        { "text": "Inline vs submit validation and autosave loss handled.", "prescription": "advisory" }
+      ],
+      "composes_with": [],
+      "requires": [],
+      "signals": { "surfaces": ["ui"], "touches": ["data"], "data_classification": "none" },
+      "checkability": "Mixed", "default_prescription": "advisory",
+      "prescription_overrides": [
+        { "item": "accessible error messaging (WCAG-gated)", "level": "constraint" }
+      ],
+      "maturity": "battle-tested"
+    },
+    {
+      "id": "surface.settings",
+      "layer": "surface", "axis": "product-surface", "name": "Settings / preferences",
+      "user_says": ["users change how it works"],
+      "classifier_hints": ["settings", "preferences", "configuration screen", "options", "defaults", "per-user settings"],
+      "brings_fr": [
+        { "text": "A preference store with per-user/per-org scope and reset.", "default_prescription": "advisory", "checkability": "High" }
+      ],
+      "leans_nfr": ["Interaction"],
+      "watch_for": [
+        { "text": "Which settings are per-device vs synced is decided.", "prescription": "advisory" }
+      ],
+      "composes_with": [],
+      "requires": [],
+      "signals": { "surfaces": ["ui"], "touches": [], "data_classification": "none" },
+      "checkability": "High", "default_prescription": "advisory",
+      "prescription_overrides": [],
+      "maturity": "battle-tested"
+    },
+    {
+      "id": "surface.profile",
+      "layer": "surface", "axis": "product-surface", "name": "Profile / account management",
+      "user_says": ["manage my account"],
+      "classifier_hints": ["profile", "account management", "edit profile", "avatar", "change password", "delete account", "data export", "my account"],
+      "brings_fr": [
+        { "text": "View/edit profile, change password, and manage connected devices.", "default_prescription": "advisory", "checkability": "High" },
+        { "text": "Account deletion and personal-data export are supported.", "default_prescription": "constraint", "checkability": "High" }
+      ],
+      "leans_nfr": ["Privacy"],
+      "watch_for": [
+        { "text": "Account deletion meets data-retention obligations.", "prescription": "constraint" }
+      ],
+      "composes_with": ["foundation.identity", "pack.privacy"],
+      "requires": [],
+      "signals": { "surfaces": ["ui"], "touches": ["pii"], "data_classification": "personal" },
+      "checkability": "High", "default_prescription": "advisory",
+      "prescription_overrides": [
+        { "item": "data export + deletion (privacy rights)", "level": "constraint" }
+      ],
+      "maturity": "battle-tested"
+    },
+    {
+      "id": "surface.feed",
+      "layer": "surface", "axis": "product-surface", "name": "Feed / timeline",
+      "user_says": ["a stream of recent things"],
+      "classifier_hints": ["feed", "timeline", "stream", "infinite scroll", "newsfeed", "activity stream", "recent posts"],
+      "brings_fr": [
+        { "text": "A chronological/ranked feed with read state and refresh.", "default_prescription": "advisory", "checkability": "Mixed" }
+      ],
+      "leans_nfr": ["Performance", "Interaction"],
+      "watch_for": [
+        { "text": "Pagination stability, real-time updates, and empty state.", "prescription": "advisory" }
+      ],
+      "composes_with": [],
+      "requires": [],
+      "signals": { "surfaces": ["ui"], "touches": ["data"], "data_classification": "none" },
+      "checkability": "Mixed", "default_prescription": "advisory",
+      "prescription_overrides": [],
+      "maturity": "mature"
+    },
+    {
+      "id": "surface.messaging",
+      "layer": "surface", "axis": "product-surface", "name": "Messaging / chat",
+      "user_says": ["users talk to each other"],
+      "classifier_hints": ["message", "messaging", "chat", "dm", "direct message", "thread", "conversation", "read receipt", "presence", "inbox between users"],
+      "brings_fr": [
+        { "text": "Threaded send/receive with read receipts and attachments.", "default_prescription": "advisory", "checkability": "Mixed" }
+      ],
+      "leans_nfr": ["Reliability", "Privacy"],
+      "watch_for": [
+        { "text": "Blocking/abuse handling is provided (trust & safety).", "prescription": "constraint" },
+        { "text": "Delivery guarantees and ordering are defined.", "prescription": "advisory" }
+      ],
+      "composes_with": ["foundation.notifications"],
+      "requires": [],
+      "signals": { "surfaces": ["ui"], "touches": ["pii"], "data_classification": "personal" },
+      "checkability": "Mixed", "default_prescription": "advisory",
+      "prescription_overrides": [
+        { "item": "block/abuse handling (trust & safety)", "level": "constraint" }
+      ],
+      "maturity": "mature"
+    },
+    {
+      "id": "surface.calendar",
+      "layer": "surface", "axis": "product-surface", "name": "Calendar / scheduling",
+      "user_says": ["book and see times"],
+      "classifier_hints": ["calendar", "schedule", "scheduling", "booking", "appointment", "availability", "time slot", "reminder", "reservation"],
+      "brings_fr": [
+        { "text": "Availability with slot booking and conflict detection.", "default_prescription": "advisory", "checkability": "Mixed" },
+        { "text": "Reminders and timezone handling are supported.", "default_prescription": "advisory", "checkability": "Mixed" }
+      ],
+      "leans_nfr": ["Reliability", "Interaction"],
+      "watch_for": [
+        { "text": "No double-booking (concurrency) and correct timezone/DST handling.", "prescription": "constraint" }
+      ],
+      "composes_with": ["foundation.notifications"],
+      "requires": [],
+      "signals": { "surfaces": ["ui"], "touches": ["data"], "data_classification": "none" },
+      "checkability": "Mixed", "default_prescription": "advisory",
+      "prescription_overrides": [
+        { "item": "no double-booking (concurrency)", "level": "constraint" },
+        { "item": "correct timezone handling", "level": "constraint" }
+      ],
+      "maturity": "mature"
+    },
+    {
+      "id": "surface.map",
+      "layer": "surface", "axis": "product-surface", "name": "Map / location",
+      "user_says": ["see things on a map"],
+      "classifier_hints": ["map", "location", "geolocation", "markers", "geosearch", "directions", "nearby", "gps", "clustering"],
+      "brings_fr": [
+        { "text": "Map rendering with markers, geosearch, and clustering.", "default_prescription": "advisory", "checkability": "Mixed" }
+      ],
+      "leans_nfr": ["Performance", "Privacy"],
+      "watch_for": [
+        { "text": "Location-permission consent is captured.", "prescription": "constraint" }
+      ],
+      "composes_with": [],
+      "requires": [],
+      "signals": { "surfaces": ["ui"], "touches": ["pii"], "data_classification": "personal" },
+      "checkability": "Mixed", "default_prescription": "advisory",
+      "prescription_overrides": [
+        { "item": "location-permission consent", "level": "constraint" }
+      ],
+      "maturity": "mature"
+    },
+    {
+      "id": "surface.marketplace",
+      "layer": "surface", "axis": "product-surface", "name": "Marketplace / two-sided listings",
+      "user_says": ["providers list, buyers browse", "let providers list services and buyers enquire"],
+      "classifier_hints": ["marketplace", "two-sided", "listings", "providers", "buyers", "sellers", "vendors", "enquiry", "reviews", "list services"],
+      "brings_fr": [
+        { "text": "Listing CRUD with discovery, detail, and enquiry/booking.", "default_prescription": "advisory", "checkability": "Mixed" },
+        { "text": "Two distinct role journeys are specified.", "default_prescription": "constraint", "checkability": "Mixed" }
+      ],
+      "leans_nfr": ["Security", "Privacy"],
+      "watch_for": [
+        { "text": "Both role journeys specified; payment handled on platform.", "prescription": "constraint" },
+        { "text": "Review moderation is provided.", "prescription": "advisory" }
+      ],
+      "composes_with": ["foundation.identity", "foundation.billing", "surface.messaging"],
+      "requires": [],
+      "signals": { "surfaces": ["ui"], "touches": ["payment", "pii"], "data_classification": "personal" },
+      "checkability": "Mixed", "default_prescription": "advisory",
+      "prescription_overrides": [
+        { "item": "both role journeys specified", "level": "constraint" },
+        { "item": "payment handled on platform", "level": "constraint" }
+      ],
+      "maturity": "mature"
+    },
+    {
+      "id": "surface.cms",
+      "layer": "surface", "axis": "product-surface", "name": "Content / CMS / publishing",
+      "user_says": ["create and publish content"],
+      "classifier_hints": ["cms", "content management", "publish", "publishing", "draft", "authoring", "articles", "blog", "editor", "versioning content"],
+      "brings_fr": [
+        { "text": "Authoring with draft/publish workflow and versioning.", "default_prescription": "advisory", "checkability": "Mixed" }
+      ],
+      "leans_nfr": ["Interaction", "Maintainability"],
+      "watch_for": [
+        { "text": "Preview, rollback, and SEO metadata are handled.", "prescription": "advisory" }
+      ],
+      "composes_with": ["foundation.storage"],
+      "requires": [],
+      "signals": { "surfaces": ["ui"], "touches": ["data"], "data_classification": "none" },
+      "checkability": "Mixed", "default_prescription": "advisory",
+      "prescription_overrides": [],
+      "maturity": "mature"
+    },
+    {
+      "id": "surface.reporting",
+      "layer": "surface", "axis": "product-surface", "name": "Reporting / export",
+      "user_says": ["download the data"],
+      "classifier_hints": ["report", "reporting", "export", "csv", "pdf", "xlsx", "download data", "scheduled report", "spreadsheet export"],
+      "brings_fr": [
+        { "text": "Report templates with CSV/PDF/XLSX export.", "default_prescription": "advisory", "checkability": "High" }
+      ],
+      "leans_nfr": ["Performance", "Data quality"],
+      "watch_for": [
+        { "text": "No PII in exports without a basis.", "prescription": "constraint" },
+        { "text": "Large-export timeouts and format correctness handled.", "prescription": "advisory" }
+      ],
+      "composes_with": ["surface.dashboard"],
+      "requires": [],
+      "signals": { "surfaces": ["ui"], "touches": ["pii"], "data_classification": "personal" },
+      "checkability": "High", "default_prescription": "advisory",
+      "prescription_overrides": [
+        { "item": "no PII in exports without basis", "level": "constraint" }
+      ],
+      "maturity": "battle-tested"
+    },
+    {
+      "id": "surface.notification-centre",
+      "layer": "surface", "axis": "product-surface", "name": "Notification centre / inbox",
+      "user_says": ["a place to see all alerts"],
+      "classifier_hints": ["notification centre", "notification center", "inbox", "alerts list", "mark as read", "unread", "notification feed"],
+      "brings_fr": [
+        { "text": "An inbox with read/unread, mark-all, and deep-link to source.", "default_prescription": "advisory", "checkability": "High" }
+      ],
+      "leans_nfr": ["Interaction"],
+      "watch_for": [],
+      "composes_with": ["foundation.notifications"],
+      "requires": [],
+      "signals": { "surfaces": ["ui"], "touches": [], "data_classification": "none" },
+      "checkability": "High", "default_prescription": "advisory",
+      "prescription_overrides": [],
+      "maturity": "battle-tested"
+    },
+    {
+      "id": "surface.landing",
+      "layer": "surface", "axis": "product-surface", "name": "Landing / marketing page",
+      "user_says": ["the public front door"],
+      "classifier_hints": ["landing page", "marketing page", "homepage", "hero", "call to action", "cta", "public site", "splash"],
+      "brings_fr": [
+        { "text": "Hero, sections, and a signup CTA with responsive layout.", "default_prescription": "advisory", "checkability": "Low" }
+      ],
+      "leans_nfr": ["Performance", "Accessibility", "Compatibility"],
+      "watch_for": [
+        { "text": "Mostly low-checkability (taste) — spend detail on examples, not rules.", "prescription": "advisory" }
+      ],
+      "composes_with": [],
+      "requires": [],
+      "signals": { "surfaces": ["ui"], "touches": [], "data_classification": "none" },
+      "checkability": "Low", "default_prescription": "advisory",
+      "prescription_overrides": [],
+      "maturity": "battle-tested"
+    },
+    {
+      "id": "surface.search-results",
+      "layer": "surface", "axis": "product-surface", "name": "Search & filter results",
+      "user_says": ["a results page with filters"],
+      "classifier_hints": ["search results", "results page", "filter results", "facets", "result cards", "no results", "filtered list"],
+      "brings_fr": [
+        { "text": "Query input with facet filters, sort, and a no-result state.", "default_prescription": "advisory", "checkability": "Mixed" }
+      ],
+      "leans_nfr": ["Performance", "Interaction"],
+      "watch_for": [
+        { "text": "Results are permission-aware (inherits Search).", "prescription": "constraint" }
+      ],
+      "composes_with": ["foundation.search"],
+      "requires": [],
+      "signals": { "surfaces": ["ui"], "touches": ["data"], "data_classification": "none" },
+      "checkability": "Mixed", "default_prescription": "advisory",
+      "prescription_overrides": [
+        { "item": "permission-aware results", "level": "constraint" }
+      ],
+      "maturity": "mature"
+    },
+
+    {
+      "id": "operation.data-migration",
+      "layer": "operation", "axis": "operation", "name": "Data migration",
+      "user_says": ["move the data to the new system"],
+      "classifier_hints": ["migration", "migrate data", "data migration", "move data", "import legacy", "reconciliation", "backfill", "etl one-off"],
+      "brings_fr": [
+        { "text": "An idempotent runner with dry-run mode and batching.", "default_prescription": "constraint", "checkability": "High" },
+        { "text": "Row-count and checksum reconciliation with rollback.", "default_prescription": "constraint", "checkability": "High" }
+      ],
+      "leans_nfr": ["Data quality", "Reliability", "Security"],
+      "watch_for": [
+        { "text": "No data loss; source and target reconcile.", "prescription": "constraint" },
+        { "text": "Idempotency (re-run safely) and partial-failure resume.", "prescription": "constraint" }
+      ],
+      "composes_with": [],
+      "requires": [],
+      "signals": { "surfaces": [], "touches": ["data"], "data_classification": "none" },
+      "checkability": "High", "default_prescription": "constraint",
+      "prescription_overrides": [
+        { "item": "no data loss", "level": "constraint" },
+        { "item": "idempotent runner", "level": "constraint" },
+        { "item": "row-count/checksum reconciliation", "level": "constraint" },
+        { "item": "rollback", "level": "constraint" },
+        { "item": "batching, dry-run ergonomics", "level": "advisory" }
+      ],
+      "maturity": "battle-tested"
+    },
+    {
+      "id": "operation.refactoring",
+      "layer": "operation", "axis": "operation", "name": "Refactoring",
+      "user_says": ["clean it up without changing what it does"],
+      "classifier_hints": ["refactor", "refactoring", "clean up code", "restructure", "tidy up", "no behaviour change", "tech debt"],
+      "brings_fr": [
+        { "text": "A constraint set plus a strong regression-test gate.", "default_prescription": "constraint", "checkability": "High" }
+      ],
+      "leans_nfr": ["Maintainability", "Reliability"],
+      "watch_for": [
+        { "text": "Observable behaviour and the public contract are unchanged.", "prescription": "constraint" },
+        { "text": "A regression suite must exist (precondition/gate).", "prescription": "constraint" }
+      ],
+      "composes_with": ["pack.testing-qa"],
+      "requires": [],
+      "signals": { "surfaces": [], "touches": [], "data_classification": "none" },
+      "checkability": "High", "default_prescription": "constraint",
+      "prescription_overrides": [
+        { "item": "observable behaviour unchanged", "level": "constraint" },
+        { "item": "public contract untouched", "level": "constraint" },
+        { "item": "regression suite must exist", "level": "constraint" }
+      ],
+      "maturity": "battle-tested"
+    },
+    {
+      "id": "operation.integration",
+      "layer": "operation", "axis": "operation", "name": "Integration / third-party connect",
+      "user_says": ["connect to an external service"],
+      "classifier_hints": ["integration", "third party", "connect to", "external service", "webhook", "api integration", "sync with", "connector"],
+      "brings_fr": [
+        { "text": "Auth to the external service with data mapping and webhook receipt.", "default_prescription": "advisory", "checkability": "Mixed" },
+        { "text": "Retry/backoff and a degraded mode on outage.", "default_prescription": "advisory", "checkability": "Mixed" }
+      ],
+      "leans_nfr": ["Reliability", "Security"],
+      "watch_for": [
+        { "text": "Webhook handling is idempotent.", "prescription": "constraint" },
+        { "text": "External outages and credential rotation are handled.", "prescription": "advisory" }
+      ],
+      "composes_with": ["foundation.eventing"],
+      "requires": [],
+      "signals": { "surfaces": [], "touches": ["external"], "data_classification": "none" },
+      "checkability": "Mixed", "default_prescription": "advisory",
+      "prescription_overrides": [
+        { "item": "idempotent webhook handling", "level": "constraint" }
+      ],
+      "maturity": "mature"
+    },
+    {
+      "id": "operation.bulk-import-export",
+      "layer": "operation", "axis": "operation", "name": "Bulk import/export",
+      "user_says": ["load a spreadsheet of records"],
+      "classifier_hints": ["bulk import", "bulk upload", "import spreadsheet", "csv import", "batch import", "mass upload", "data load"],
+      "brings_fr": [
+        { "text": "File parse with a validation report and partial-accept.", "default_prescription": "advisory", "checkability": "High" },
+        { "text": "Dedupe and dry-run preview are supported.", "default_prescription": "advisory", "checkability": "High" }
+      ],
+      "leans_nfr": ["Data quality", "Performance"],
+      "watch_for": [
+        { "text": "Validation before commit (no partial corruption).", "prescription": "constraint" }
+      ],
+      "composes_with": [],
+      "requires": [],
+      "signals": { "surfaces": [], "touches": ["data"], "data_classification": "none" },
+      "checkability": "High", "default_prescription": "advisory",
+      "prescription_overrides": [
+        { "item": "validation before commit", "level": "constraint" }
+      ],
+      "maturity": "mature"
+    },
+    {
+      "id": "operation.performance",
+      "layer": "operation", "axis": "operation", "name": "Performance optimisation",
+      "user_says": ["make it faster"],
+      "classifier_hints": ["performance", "make it faster", "optimise", "optimize", "speed up", "latency", "slow", "throughput improvement"],
+      "brings_fr": [
+        { "text": "Baseline measurement, a target, and a regression guard.", "default_prescription": "constraint", "checkability": "High" }
+      ],
+      "leans_nfr": ["Performance"],
+      "watch_for": [
+        { "text": "Behaviour unchanged; the meter is defined before optimising.", "prescription": "constraint" }
+      ],
+      "composes_with": [],
+      "requires": [],
+      "signals": { "surfaces": [], "touches": [], "data_classification": "none" },
+      "checkability": "High", "default_prescription": "advisory",
+      "prescription_overrides": [
+        { "item": "behaviour unchanged", "level": "constraint" },
+        { "item": "meter defined before", "level": "constraint" }
+      ],
+      "maturity": "mature"
+    },
+    {
+      "id": "operation.deprecation",
+      "layer": "operation", "axis": "operation", "name": "Deprecation / sunset",
+      "user_says": ["retire the old feature safely"],
+      "classifier_hints": ["deprecate", "deprecation", "sunset", "retire", "remove feature", "decommission", "end of life"],
+      "brings_fr": [
+        { "text": "Usage check, migration path, comms, phased disable, and removal.", "default_prescription": "advisory", "checkability": "Mixed" }
+      ],
+      "leans_nfr": ["Reliability", "Maintainability"],
+      "watch_for": [
+        { "text": "Dependency/usage check before removal.", "prescription": "constraint" }
+      ],
+      "composes_with": [],
+      "requires": [],
+      "signals": { "surfaces": [], "touches": [], "data_classification": "none" },
+      "checkability": "Mixed", "default_prescription": "advisory",
+      "prescription_overrides": [
+        { "item": "dependency/usage check before removal", "level": "constraint" }
+      ],
+      "maturity": "mature"
+    },
+
+    {
+      "id": "pack.accessibility",
+      "layer": "pack", "axis": "quality", "name": "Accessibility (WCAG 2.2)",
+      "user_says": ["usable by people with disabilities"],
+      "classifier_hints": ["accessibility", "wcag", "a11y", "screen reader", "keyboard navigation", "contrast", "aria", "focus order", "touch target"],
+      "brings_fr": [
+        { "text": "Contrast, keyboard nav, focus order, and labels meet WCAG 2.2 AA.", "default_prescription": "constraint", "checkability": "High" }
+      ],
+      "leans_nfr": ["Accessibility", "Interaction"],
+      "watch_for": [
+        { "text": "Mechanisable checks (contrast, touch-target, keyboard, focus) gate the build.", "prescription": "constraint" }
+      ],
+      "composes_with": [],
+      "requires": [],
+      "signals": { "surfaces": ["ui"], "touches": [], "data_classification": "none" },
+      "checkability": "High", "default_prescription": "advisory",
+      "prescription_overrides": [
+        { "item": "mechanisable checks (contrast, touch-target, keyboard nav, focus order)", "level": "constraint" },
+        { "item": "judgment aspects", "level": "advisory" }
+      ],
+      "maturity": "battle-tested"
+    },
+    {
+      "id": "pack.i18n",
+      "layer": "pack", "axis": "quality", "name": "Internationalisation / localisation",
+      "user_says": ["works in multiple languages"],
+      "classifier_hints": ["internationalisation", "internationalization", "i18n", "localisation", "localization", "l10n", "translation", "multi-language", "locale", "rtl"],
+      "brings_fr": [
+        { "text": "String externalisation, locale formats, RTL, and timezone handling.", "default_prescription": "advisory", "checkability": "Mixed" }
+      ],
+      "leans_nfr": ["Compatibility", "Interaction"],
+      "watch_for": [
+        { "text": "Where a locale is legally mandated it becomes a constraint.", "prescription": "advisory" }
+      ],
+      "composes_with": [],
+      "requires": [],
+      "signals": { "surfaces": ["ui"], "touches": [], "data_classification": "none" },
+      "checkability": "Mixed", "default_prescription": "advisory",
+      "prescription_overrides": [],
+      "maturity": "mature"
+    },
+    {
+      "id": "pack.security",
+      "layer": "pack", "axis": "quality", "name": "Security hardening (deepened)",
+      "user_says": ["keep it secure"],
+      "classifier_hints": ["security", "hardening", "owasp", "encryption", "secrets", "input validation", "rate limiting", "vulnerability", "dependency scanning", "sast", "dast", "threat model"],
+      "brings_fr": [
+        { "text": "Input validation, secrets management, and dependency scanning.", "default_prescription": "constraint", "checkability": "High" },
+        { "text": "Encryption in transit and at rest is applied.", "default_prescription": "constraint", "checkability": "Mixed" }
+      ],
+      "leans_nfr": ["Security"],
+      "watch_for": [
+        { "text": "Authz, input validation, encryption, secrets, supply-chain scanning enforced.", "prescription": "constraint" },
+        { "text": "Threat-model process and pen-test cadence considered.", "prescription": "advisory" }
+      ],
+      "composes_with": ["foundation.authorisation"],
+      "requires": [],
+      "signals": { "surfaces": [], "touches": ["auth", "data"], "data_classification": "none" },
+      "checkability": "Mixed", "default_prescription": "constraint",
+      "prescription_overrides": [
+        { "item": "authz, input validation, encryption in transit + at rest, secrets management, dependency/supply-chain scanning", "level": "constraint" },
+        { "item": "threat-model process, pen-test cadence", "level": "advisory" }
+      ],
+      "maturity": "mature"
+    },
+    {
+      "id": "pack.privacy",
+      "layer": "pack", "axis": "quality", "name": "Privacy / data rights (APP-aligned)",
+      "user_says": ["handle personal data lawfully"],
+      "classifier_hints": ["privacy", "personal data", "pii", "consent", "data rights", "gdpr", "app", "data deletion", "right to erasure", "retention", "data export"],
+      "brings_fr": [
+        { "text": "Consent capture, data export, deletion/erasure, and retention schedule.", "default_prescription": "constraint", "checkability": "Mixed" }
+      ],
+      "leans_nfr": ["Privacy", "Compliance"],
+      "watch_for": [
+        { "text": "Consent, export, deletion, and a retention schedule exist.", "prescription": "constraint" },
+        { "text": "Consent-UX wording is reviewed.", "prescription": "advisory" }
+      ],
+      "composes_with": ["surface.profile"],
+      "requires": [],
+      "signals": { "surfaces": [], "touches": ["pii"], "data_classification": "personal" },
+      "checkability": "Mixed", "default_prescription": "constraint",
+      "prescription_overrides": [
+        { "item": "consent, export, deletion, retention schedule", "level": "constraint" },
+        { "item": "consent-UX wording", "level": "advisory" }
+      ],
+      "maturity": "mature"
+    },
+    {
+      "id": "pack.resilience",
+      "layer": "pack", "axis": "quality", "name": "Resilience / degraded-mode (SRE)",
+      "user_says": ["it keeps working when something fails"],
+      "classifier_hints": ["resilience", "degraded mode", "circuit breaker", "timeout", "retries", "failover", "disaster recovery", "rpo", "rto", "slo", "sli", "graceful degradation"],
+      "brings_fr": [
+        { "text": "Timeouts, retries, circuit breakers, and graceful degradation.", "default_prescription": "advisory", "checkability": "Mixed" },
+        { "text": "Backups are restore-tested with stated RPO/RTO.", "default_prescription": "constraint", "checkability": "High" }
+      ],
+      "leans_nfr": ["Reliability"],
+      "watch_for": [
+        { "text": "What the platform does when a dependency is down is defined.", "prescription": "advisory" }
+      ],
+      "composes_with": ["delivery.backup-dr"],
+      "requires": [],
+      "signals": { "surfaces": [], "touches": [], "data_classification": "none" },
+      "checkability": "Mixed", "default_prescription": "advisory",
+      "prescription_overrides": [
+        { "item": "backups are restore-tested; RPO/RTO stated", "level": "constraint" },
+        { "item": "timeouts, retries, SLO targets", "level": "advisory" }
+      ],
+      "maturity": "mature"
+    },
+    {
+      "id": "pack.compliance",
+      "layer": "pack", "axis": "quality", "name": "Compliance / audit pack",
+      "user_says": ["meet regulatory obligations"],
+      "classifier_hints": ["compliance", "regulatory", "audit pack", "evidence retention", "role segregation", "waiver", "government", "ism", "essential eight"],
+      "brings_fr": [
+        { "text": "Audit-trail completeness with evidence retention and role segregation.", "default_prescription": "constraint", "checkability": "High" }
+      ],
+      "leans_nfr": ["Compliance", "Security"],
+      "watch_for": [
+        { "text": "Audit completeness and a waiver log with reason are maintained.", "prescription": "constraint" }
+      ],
+      "composes_with": ["foundation.audit"],
+      "requires": [],
+      "signals": { "surfaces": [], "touches": ["pii"], "data_classification": "personal" },
+      "checkability": "High", "default_prescription": "constraint",
+      "prescription_overrides": [
+        { "item": "audit completeness; waiver log with reason", "level": "constraint" }
+      ],
+      "maturity": "mature"
+    },
+    {
+      "id": "pack.testing-qa",
+      "layer": "pack", "axis": "quality", "name": "Testing & QA strategy",
+      "user_says": ["it's properly tested"],
+      "classifier_hints": ["testing", "qa", "test strategy", "test pyramid", "unit test", "integration test", "contract test", "e2e", "coverage", "uat"],
+      "brings_fr": [
+        { "text": "A test pyramid (unit→integration→contract→e2e) with test-data management.", "default_prescription": "silent-default", "checkability": "High" }
+      ],
+      "leans_nfr": ["Functional Suitability", "Reliability"],
+      "watch_for": [
+        { "text": "Coverage target per feature is stated.", "prescription": "advisory" }
+      ],
+      "composes_with": ["operation.refactoring"],
+      "requires": [],
+      "signals": { "surfaces": [], "touches": [], "data_classification": "none" },
+      "checkability": "High", "default_prescription": "silent-default",
+      "prescription_overrides": [
+        { "item": "coverage target per feature", "level": "advisory" }
+      ],
+      "maturity": "battle-tested"
+    },
+    {
+      "id": "pack.product-analytics",
+      "layer": "pack", "axis": "quality", "name": "Product analytics & instrumentation",
+      "user_says": ["understand what users do"],
+      "classifier_hints": ["product analytics", "instrumentation", "event tracking", "funnel", "a/b test", "user behaviour", "telemetry events", "mixpanel", "amplitude"],
+      "brings_fr": [
+        { "text": "An event taxonomy with funnels and consent-aware tracking.", "default_prescription": "advisory", "checkability": "Mixed" }
+      ],
+      "leans_nfr": ["Privacy"],
+      "watch_for": [
+        { "text": "Tracking is consent-aware only.", "prescription": "constraint" }
+      ],
+      "composes_with": ["pack.privacy"],
+      "requires": [],
+      "signals": { "surfaces": ["ui"], "touches": ["pii"], "data_classification": "personal" },
+      "checkability": "Mixed", "default_prescription": "advisory",
+      "prescription_overrides": [
+        { "item": "consent-aware tracking only", "level": "constraint" }
+      ],
+      "maturity": "mature"
+    },
+    {
+      "id": "pack.docs-adr",
+      "layer": "pack", "axis": "quality", "name": "Documentation & decision records",
+      "user_says": ["decisions and docs are written down"],
+      "classifier_hints": ["documentation", "docs", "adr", "decision record", "api docs", "runbook docs", "onboarding docs"],
+      "brings_fr": [
+        { "text": "ADRs, API docs, runbooks, and onboarding docs are maintained.", "default_prescription": "advisory", "checkability": "Mixed" }
+      ],
+      "leans_nfr": ["Maintainability"],
+      "watch_for": [],
+      "composes_with": [],
+      "requires": [],
+      "signals": { "surfaces": [], "touches": [], "data_classification": "none" },
+      "checkability": "Mixed", "default_prescription": "advisory",
+      "prescription_overrides": [],
+      "maturity": "mature"
+    },
+    {
+      "id": "pack.cost",
+      "layer": "pack", "axis": "quality", "name": "Cost / FinOps awareness",
+      "user_says": ["keep an eye on running costs"],
+      "classifier_hints": ["cost", "finops", "budget", "resource budget", "cost observability", "spend", "cloud cost"],
+      "brings_fr": [
+        { "text": "Resource budgets and cost observability are tracked.", "default_prescription": "advisory", "checkability": "High" }
+      ],
+      "leans_nfr": ["Cost"],
+      "watch_for": [],
+      "composes_with": [],
+      "requires": [],
+      "signals": { "surfaces": [], "touches": [], "data_classification": "none" },
+      "checkability": "High", "default_prescription": "advisory",
+      "prescription_overrides": [],
+      "maturity": "experimental"
+    },
+
+    {
+      "id": "delivery.cicd",
+      "layer": "delivery", "axis": "delivery", "name": "CI/CD pipeline",
+      "user_says": ["changes ship safely and automatically"],
+      "classifier_hints": ["ci/cd", "cicd", "continuous integration", "continuous deployment", "pipeline", "build gate", "branch protection", "pr checks", "automated deploy"],
+      "brings_fr": [
+        { "text": "Build, ordered test gates, lint/typecheck gates, and PR checks.", "default_prescription": "silent-default", "checkability": "High" }
+      ],
+      "leans_nfr": ["Maintainability", "Reliability"],
+      "watch_for": [
+        { "text": "Gate ordering (fast tests first); deploy-on-green only.", "prescription": "advisory" }
+      ],
+      "composes_with": ["delivery.environments"],
+      "requires": [],
+      "signals": { "surfaces": [], "touches": [], "data_classification": "none" },
+      "checkability": "High", "default_prescription": "silent-default",
+      "prescription_overrides": [],
+      "maturity": "battle-tested"
+    },
+    {
+      "id": "delivery.environments",
+      "layer": "delivery", "axis": "delivery", "name": "Environments & promotion",
+      "user_says": ["separate dev, test, and live"],
+      "classifier_hints": ["environments", "staging", "promotion", "config per environment", "dev prod parity", "secrets per environment"],
+      "brings_fr": [
+        { "text": "Environment definitions with config-per-environment and a promotion path.", "default_prescription": "silent-default", "checkability": "High" }
+      ],
+      "leans_nfr": ["Reliability", "Security"],
+      "watch_for": [
+        { "text": "Dev/prod parity; secrets never in code.", "prescription": "constraint" }
+      ],
+      "composes_with": ["delivery.iac"],
+      "requires": [],
+      "signals": { "surfaces": [], "touches": [], "data_classification": "none" },
+      "checkability": "High", "default_prescription": "silent-default",
+      "prescription_overrides": [
+        { "item": "least-privilege deploy credentials", "level": "constraint" }
+      ],
+      "maturity": "battle-tested"
+    },
+    {
+      "id": "delivery.iac",
+      "layer": "delivery", "axis": "delivery", "name": "Infrastructure-as-Code",
+      "user_says": ["the servers are defined in code, not clicked"],
+      "classifier_hints": ["infrastructure as code", "iac", "terraform", "provisioning", "declarative infra", "drift detection", "cloudformation"],
+      "brings_fr": [
+        { "text": "Declarative infra with provisioning and drift detection.", "default_prescription": "silent-default", "checkability": "High" }
+      ],
+      "leans_nfr": ["Maintainability"],
+      "watch_for": [
+        { "text": "State management and least-privilege deploy credentials.", "prescription": "constraint" }
+      ],
+      "composes_with": [],
+      "requires": [],
+      "signals": { "surfaces": [], "touches": [], "data_classification": "none" },
+      "checkability": "High", "default_prescription": "silent-default",
+      "prescription_overrides": [
+        { "item": "least-privilege deploy credentials", "level": "constraint" }
+      ],
+      "maturity": "mature"
+    },
+    {
+      "id": "delivery.release-strategy",
+      "layer": "delivery", "axis": "delivery", "name": "Release strategy",
+      "user_says": ["roll out without breaking everyone"],
+      "classifier_hints": ["release strategy", "blue green", "canary", "gradual rollout", "feature gated release", "rollback", "expand contract migration"],
+      "brings_fr": [
+        { "text": "Gradual rollout (blue-green/canary) with instant rollback.", "default_prescription": "silent-default", "checkability": "Mixed" }
+      ],
+      "leans_nfr": ["Reliability"],
+      "watch_for": [
+        { "text": "Backward-compatible migrations during rollout; rollback loses no data.", "prescription": "constraint" }
+      ],
+      "composes_with": ["foundation.config"],
+      "requires": [],
+      "signals": { "surfaces": [], "touches": ["data"], "data_classification": "none" },
+      "checkability": "Mixed", "default_prescription": "silent-default",
+      "prescription_overrides": [
+        { "item": "backward-compatible migrations during rollout", "level": "constraint" }
+      ],
+      "maturity": "mature"
+    },
+    {
+      "id": "delivery.incident-response",
+      "layer": "delivery", "axis": "delivery", "name": "Incident response & runbooks",
+      "user_says": ["when it breaks, there's a plan"],
+      "classifier_hints": ["incident response", "runbook", "on-call", "escalation", "post-incident", "status page", "alert routing", "severity levels"],
+      "brings_fr": [
+        { "text": "Alert routing, on-call/escalation, runbooks, and post-incident review.", "default_prescription": "silent-default", "checkability": "Mixed" }
+      ],
+      "leans_nfr": ["Reliability"],
+      "watch_for": [
+        { "text": "Undocumented tribal knowledge; undefined severity levels.", "prescription": "advisory" }
+      ],
+      "composes_with": ["foundation.observability"],
+      "requires": [],
+      "signals": { "surfaces": [], "touches": [], "data_classification": "none" },
+      "checkability": "Mixed", "default_prescription": "silent-default",
+      "prescription_overrides": [],
+      "maturity": "mature"
+    },
+    {
+      "id": "delivery.backup-dr",
+      "layer": "delivery", "axis": "delivery", "name": "Backup & disaster recovery",
+      "user_says": ["we can recover from a catastrophe"],
+      "classifier_hints": ["backup", "disaster recovery", "dr", "restore", "rpo", "rto", "failover", "backup schedule"],
+      "brings_fr": [
+        { "text": "A backup schedule with restore tests and stated RPO/RTO.", "default_prescription": "constraint", "checkability": "High" }
+      ],
+      "leans_nfr": ["Reliability", "Security"],
+      "watch_for": [
+        { "text": "Backups are restore-tested; backup encryption applied.", "prescription": "constraint" }
+      ],
+      "composes_with": ["pack.resilience"],
+      "requires": [],
+      "signals": { "surfaces": [], "touches": ["data"], "data_classification": "none" },
+      "checkability": "High", "default_prescription": "silent-default",
+      "prescription_overrides": [
+        { "item": "restore-tested backups", "level": "constraint" }
+      ],
+      "maturity": "mature"
+    },
+
+    {
+      "id": "device.responsive-web",
+      "layer": "device", "axis": "target", "name": "Responsive web",
+      "user_says": ["works in a web browser on any screen"],
+      "classifier_hints": ["responsive web", "web app", "browser", "breakpoint", "viewport", "desktop and mobile web"],
+      "brings_fr": [],
+      "leans_nfr": ["Compatibility", "Performance"],
+      "watch_for": [
+        { "text": "Breakpoint behaviour and browser-support matrix defined.", "prescription": "advisory" }
+      ],
+      "composes_with": [],
+      "requires": [],
+      "signals": { "surfaces": ["ui"], "touches": [], "data_classification": "none" },
+      "checkability": "Mixed", "default_prescription": "advisory",
+      "prescription_overrides": [],
+      "maturity": "battle-tested"
+    },
+    {
+      "id": "device.pwa",
+      "layer": "device", "axis": "target", "name": "PWA (installable / offline)",
+      "user_says": ["installable, works offline"],
+      "classifier_hints": ["pwa", "progressive web app", "installable", "service worker", "offline cache", "app manifest", "background sync"],
+      "brings_fr": [],
+      "leans_nfr": ["Reliability", "Compatibility"],
+      "watch_for": [
+        { "text": "Requires the Sync & offline foundation.", "prescription": "advisory" }
+      ],
+      "composes_with": [],
+      "requires": ["foundation.sync-offline"],
+      "signals": { "surfaces": ["ui"], "touches": [], "data_classification": "none" },
+      "checkability": "Mixed", "default_prescription": "advisory",
+      "prescription_overrides": [],
+      "maturity": "mature"
+    },
+    {
+      "id": "device.native-mobile",
+      "layer": "device", "axis": "target", "name": "Native mobile (iOS / Android)",
+      "user_says": ["a phone app from the app store"],
+      "classifier_hints": ["native mobile", "ios", "android", "mobile app", "app store", "push tokens", "deep links", "react native", "flutter"],
+      "brings_fr": [],
+      "leans_nfr": ["Compatibility", "Interaction", "Performance"],
+      "watch_for": [
+        { "text": "App-store review requirements and per-platform permission UX.", "prescription": "advisory" }
+      ],
+      "composes_with": [],
+      "requires": ["foundation.sync-offline", "foundation.notifications"],
+      "signals": { "surfaces": ["ui"], "touches": [], "data_classification": "none" },
+      "checkability": "Mixed", "default_prescription": "advisory",
+      "prescription_overrides": [
+        { "item": "app-store compliance", "level": "constraint" }
+      ],
+      "maturity": "mature"
+    },
+    {
+      "id": "device.tablet",
+      "layer": "device", "axis": "target", "name": "Tablet",
+      "user_says": ["optimised for tablets"],
+      "classifier_hints": ["tablet", "ipad", "multi-pane", "split view", "larger touch targets", "orientation"],
+      "brings_fr": [],
+      "leans_nfr": ["Interaction", "Compatibility"],
+      "watch_for": [],
+      "composes_with": [],
+      "requires": [],
+      "signals": { "surfaces": ["ui"], "touches": [], "data_classification": "none" },
+      "checkability": "Mixed", "default_prescription": "advisory",
+      "prescription_overrides": [],
+      "maturity": "mature"
+    },
+    {
+      "id": "device.desktop",
+      "layer": "device", "axis": "target", "name": "Desktop",
+      "user_says": ["a desktop application"],
+      "classifier_hints": ["desktop app", "electron", "tauri", "native desktop", "window management", "system tray", "auto-update desktop"],
+      "brings_fr": [],
+      "leans_nfr": ["Compatibility", "Security"],
+      "watch_for": [
+        { "text": "Native surface security and auto-update handled.", "prescription": "advisory" }
+      ],
+      "composes_with": [],
+      "requires": [],
+      "signals": { "surfaces": ["ui"], "touches": [], "data_classification": "none" },
+      "checkability": "Mixed", "default_prescription": "advisory",
+      "prescription_overrides": [],
+      "maturity": "mature"
+    },
+    {
+      "id": "device.kiosk",
+      "layer": "device", "axis": "target", "name": "Kiosk / embedded",
+      "user_says": ["a locked-down single-purpose device"],
+      "classifier_hints": ["kiosk", "embedded", "locked down", "single purpose", "idle reset", "self-service terminal"],
+      "brings_fr": [],
+      "leans_nfr": ["Reliability", "Security"],
+      "watch_for": [],
+      "composes_with": [],
+      "requires": [],
+      "signals": { "surfaces": ["ui"], "touches": [], "data_classification": "none" },
+      "checkability": "Mixed", "default_prescription": "advisory",
+      "prescription_overrides": [],
+      "maturity": "experimental"
+    }
+  ],
+  "blueprints": [
+    {
+      "id": "blueprint.marketplace", "name": "Two-sided marketplace",
+      "composedOf": ["foundation.identity", "foundation.tenancy", "foundation.billing", "foundation.search", "foundation.notifications", "foundation.storage", "surface.onboarding", "surface.marketplace", "surface.profile", "surface.messaging", "surface.dashboard", "surface.crud-admin"],
+      "defaultDevices": ["device.responsive-web", "device.native-mobile"],
+      "architectureShape": "modular monolith", "maturity": "battle-tested"
+    },
+    {
+      "id": "blueprint.saas-workspace", "name": "SaaS workspace / admin tool",
+      "composedOf": ["foundation.identity", "foundation.tenancy", "foundation.audit", "foundation.config", "surface.onboarding", "surface.dashboard", "surface.crud-admin", "surface.settings", "surface.reporting"],
+      "defaultDevices": ["device.responsive-web", "device.pwa"],
+      "architectureShape": "modular monolith", "maturity": "battle-tested"
+    },
+    {
+      "id": "blueprint.consumer-service", "name": "Consumer service app",
+      "composedOf": ["foundation.identity", "foundation.notifications", "foundation.storage", "foundation.sync-offline", "surface.onboarding", "surface.feed", "surface.profile", "surface.messaging", "surface.settings"],
+      "defaultDevices": ["device.native-mobile", "device.responsive-web"],
+      "architectureShape": "modular monolith", "maturity": "battle-tested"
+    },
+    {
+      "id": "blueprint.gov-operations", "name": "Internal/government operations console",
+      "composedOf": ["foundation.identity", "foundation.authorisation", "foundation.audit", "foundation.observability", "pack.privacy", "pack.compliance", "surface.dashboard", "surface.list-detail", "surface.workflow", "surface.reporting"],
+      "defaultDevices": ["device.responsive-web"],
+      "architectureShape": "modular monolith", "maturity": "mature"
+    },
+    {
+      "id": "blueprint.content-publishing", "name": "Content / publishing platform",
+      "composedOf": ["foundation.identity", "foundation.storage", "foundation.search", "foundation.config", "surface.cms", "surface.feed", "surface.landing", "surface.profile", "surface.crud-admin"],
+      "defaultDevices": ["device.responsive-web", "device.pwa"],
+      "architectureShape": "modular monolith", "maturity": "mature"
+    },
+    {
+      "id": "blueprint.booking-scheduling", "name": "Booking / scheduling platform",
+      "composedOf": ["foundation.identity", "foundation.notifications", "foundation.billing", "foundation.sync-offline", "surface.onboarding", "surface.calendar", "surface.workflow", "surface.dashboard", "surface.crud-admin"],
+      "defaultDevices": ["device.responsive-web", "device.native-mobile"],
+      "architectureShape": "modular monolith", "maturity": "mature"
+    },
+    {
+      "id": "blueprint.data-insights", "name": "Data / insights platform",
+      "composedOf": ["foundation.identity", "foundation.data-layer", "foundation.data-architecture", "foundation.search", "foundation.observability", "surface.dashboard", "surface.reporting", "surface.list-detail", "surface.crud-admin"],
+      "defaultDevices": ["device.responsive-web"],
+      "architectureShape": "separate analytics service", "maturity": "experimental"
+    }
+  ]
+}

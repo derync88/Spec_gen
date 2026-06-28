@@ -18,8 +18,16 @@ router.post('/', upload.single('file'), specsController.create);
 router.get('/:id', specsController.get);
 router.put('/:id', upload.single('file'), specsController.update);
 router.delete('/:id', specsController.remove);
+router.post('/:id/questions', specsController.questions);
 router.post('/:id/review', specsController.review);
 router.post('/:id/rewrite', specsController.rewrite);
+router.post('/:id/classify', specsController.classify);
+router.post('/:id/ingest-repo', specsController.ingestRepo);
+router.get('/:id/archetypes', specsController.archetypes);
+router.patch('/:id/archetypes/:archetypeId', specsController.decideArchetype);
+router.get('/:id/versions', specsController.listVersions);
+router.get('/:id/versions/:versionId', specsController.getVersion);
+router.post('/:id/versions/:versionId/revert', specsController.revertVersion);
 router.get('/:id/export', specsController.exportMarkdown);
 router.get('/:id/export-spec', specsController.exportRewrite);
 

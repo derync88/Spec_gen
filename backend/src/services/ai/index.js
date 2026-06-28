@@ -50,7 +50,20 @@ function stripFences(text) {
 }
 
 /**
+ * Generate clarifying questions for a draft (FR-4).
+ * Returns { provider, model, questions }.
+ */
+export async function runQuestions(spec) {
+  const provider = pickProvider();
+  const { provider: name, model, text } = await provider.questions(spec);
+  const parsed = parseJson(text);
+  const questions = Array.isArray(parsed.questions) ? parsed.questions : [];
+  return { provider: name, model, questions };
+}
+
+/**
  * Run a requirements review for a spec.
+ * `spec` may carry { title, content, context, answers }.
  * Returns { provider, model, result } where result is the parsed analysis.
  */
 export async function runReview(spec) {
@@ -58,6 +71,35 @@ export async function runReview(spec) {
   const { provider: name, model, text } = await provider.review(spec);
   const result = parseJson(text);
   return { provider: name, model, result };
+}
+
+/**
+ * Classify free-text requirements against candidate archetypes (FR-CL).
+ * Returns { provider, model, classifications }.
+ */
+export async function runClassify(requirements, candidates) {
+  const provider = pickProvider();
+  const { provider: name, model, text } = await provider.classify(requirements, candidates);
+  const parsed = parseJson(text);
+  const classifications = Array.isArray(parsed.classifications) ? parsed.classifications : [];
+  return { provider: name, model, classifications };
+}
+
+/**
+ * Read an existing project's repo snapshot and derive its tech stack + the
+ * requirements it already delivers (existing-project ingestion).
+ * Returns { provider, model, stack, deliveredRequirements }.
+ */
+export async function runInferDelivered(spec, snapshot) {
+  const provider = pickProvider();
+  const { provider: name, model, text } = await provider.inferDelivered(spec, snapshot);
+  const parsed = parseJson(text);
+  return {
+    provider: name,
+    model,
+    stack: Array.isArray(parsed.stack) ? parsed.stack : [],
+    deliveredRequirements: Array.isArray(parsed.deliveredRequirements) ? parsed.deliveredRequirements : [],
+  };
 }
 
 /**

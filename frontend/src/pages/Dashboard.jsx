@@ -1,6 +1,7 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { api } from '../api/client.js';
+import { useSpecs } from '../context/SpecsContext.jsx';
 
 export function scoreColor(score) {
   if (score == null) return 'var(--muted)';
@@ -11,21 +12,10 @@ export function scoreColor(score) {
 
 export default function Dashboard() {
   const navigate = useNavigate();
-  const [specs, setSpecs] = useState([]);
+  const { specs, refresh } = useSpecs();
   const [title, setTitle] = useState('');
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
-
-  const load = async () => {
-    try {
-      const { specs } = await api.listSpecs();
-      setSpecs(specs);
-    } catch (err) {
-      setError(err.message);
-    }
-  };
-
-  useEffect(() => { load(); }, []);
 
   const createBlank = async (e) => {
     e.preventDefault();
@@ -34,6 +24,7 @@ export default function Dashboard() {
     setError('');
     try {
       const { spec } = await api.createSpec({ title, content: '' });
+      await refresh();
       navigate(`/specs/${spec.id}`);
     } catch (err) {
       setError(err.message);
@@ -51,19 +42,13 @@ export default function Dashboard() {
       const form = new FormData();
       form.append('file', file);
       const { spec } = await api.createSpecFromFile(form);
+      await refresh();
       navigate(`/specs/${spec.id}`);
     } catch (err) {
       setError(err.message);
     } finally {
       setBusy(false);
     }
-  };
-
-  const remove = async (id, e) => {
-    e.stopPropagation();
-    if (!confirm('Delete this spec?')) return;
-    await api.deleteSpec(id);
-    load();
   };
 
   return (
@@ -86,27 +71,15 @@ export default function Dashboard() {
         {error && <p className="error">{error}</p>}
         <p className="muted" style={{ marginBottom: 0 }}>
           Write or paste draft requirements, then run an AI review for full functional &amp; non-functional coverage.
+          Your saved specs are always in the sidebar on the left.
         </p>
       </div>
 
-      <h3 className="section-title">Your specs</h3>
-      {specs.length === 0 && <p className="muted">No specs yet — create one above.</p>}
-      {specs.map((s) => (
-        <div key={s.id} className="spec-list-item" onClick={() => navigate(`/specs/${s.id}`)} style={{ cursor: 'pointer' }}>
-          <div>
-            <strong>{s.title}</strong>
-            <div className="muted" style={{ fontSize: '0.82rem' }}>
-              Updated {new Date(s.updated_at).toLocaleString()}
-            </div>
-          </div>
-          <div className="row">
-            <span className="score-pill" style={{ background: '#11151d', color: scoreColor(s.latest_score) }}>
-              {s.latest_score == null ? '—' : `${s.latest_score}`}
-            </span>
-            <button onClick={(e) => remove(s.id, e)}>Delete</button>
-          </div>
-        </div>
-      ))}
+      {specs.length > 0 && (
+        <p className="muted" style={{ marginTop: '1.2rem' }}>
+          You have {specs.length} saved spec{specs.length === 1 ? '' : 's'} — pick one from the sidebar to pick up where you left off.
+        </p>
+      )}
     </div>
   );
 }
