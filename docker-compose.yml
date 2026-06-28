@@ -1,0 +1,21 @@
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: specgen-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: specgen
+      POSTGRES_PASSWORD: specgen
+      POSTGRES_DB: specgen
+    ports:
+      - "5544:5432"
+    volumes:
+      - specgen_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U specgen -d specgen"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  specgen_pgdata:
