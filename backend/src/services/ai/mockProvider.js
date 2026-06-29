@@ -87,6 +87,7 @@ export async function review(spec) {
         text: 'The system should let users do the main task.',
         type: 'functional',
         smart: { specific: false, measurable: false, achievable: true, relevant: true, testable: false },
+        improvedSmart: { specific: true, measurable: true, achievable: true, relevant: true, testable: true },
         issues: ['Vague ("main task", "should")', 'Not measurable', 'Not independently testable'],
         improvedText: 'The system shall allow an authenticated user to create, view, edit, and delete a {primary entity}, with each operation confirmed within 2 seconds.',
       },
@@ -181,9 +182,11 @@ export async function rewrite(spec, reviewResult) {
   const nfr = nonConstraint.filter((s) => s.type === 'non-functional');
 
   const bullet = (req) => `- ${req.text || req.improvedText || ''}`;
+  // `text` is already gate-resolved (original wording unless the author accepted
+  // the rewrite), so use it verbatim — do not re-apply improvedText here.
   const existingFr = existing
     .filter((e) => e.type !== 'non-functional')
-    .map((e) => `- ${e.improvedText || e.text}`);
+    .map((e) => `- ${e.text || e.improvedText || ''}`);
 
   const md = [
     `# ${title}`,

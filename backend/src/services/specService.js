@@ -2,6 +2,7 @@ import { query } from '../db/pool.js';
 import { httpError } from '../middleware/error.js';
 import { runReview, runRewrite, runQuestions, runInferDelivered } from './ai/index.js';
 import { computeChangeSummary } from '../utils/diff.js';
+import { withDefinitionOfDone } from '../utils/definitionOfDone.js';
 import { reconcileRequirementIds, fingerprint } from './requirementIds.js';
 import { composeForReview } from './compositionService.js';
 import { fetchRepoSnapshot } from './githubService.js';
@@ -235,12 +236,48 @@ export function selectSuggestions(allSuggestions, selectedIds, edits) {
 }
 
 /**
+ * Apply the human-in-the-loop gate to the author's OWN requirements.
+ *
+ * Each existing requirement carries an AI `improvedText` rewrite. The improvement
+ * is opt-in (the project's "no silent injection" rule): the spec keeps the
+ * author's ORIGINAL wording unless they explicitly accepted the rewrite. Accept
+ * adopts the rewrite (or the author's edit of it); reject/pending keep the
+ * original. The requirement itself is never dropped.
+ *
+ * Returns the requirements with `text` resolved to the chosen wording (and the
+ * raw `improvedText` cleared so downstream providers can't re-apply it), plus
+ * the ids whose improvement was adopted (for provenance).
+ */
+export function resolveExistingRequirements(existing, selectedIds, edits) {
+  const accepted = new Set(Array.isArray(selectedIds) ? selectedIds : []);
+  const editMap = edits && typeof edits === 'object' ? edits : {};
+  const list = Array.isArray(existing) ? existing : [];
+
+  const improvementsAccepted = [];
+  const resolved = list.map((e) => {
+    const hasImprovement = typeof e.improvedText === 'string' && e.improvedText.trim() !== '';
+    const adopt = hasImprovement && accepted.has(e.id);
+    if (adopt) improvementsAccepted.push(e.id);
+    const finalText = adopt ? (editMap[e.id] || e.improvedText) : e.text;
+    return {
+      ...e,
+      originalText: e.text,
+      text: finalText,
+      improvementAccepted: adopt,
+      improvedText: undefined, // authoritative text is now `text`; don't let providers re-improve
+    };
+  });
+
+  return { resolved, improvementsAccepted };
+}
+
+/**
  * FR-1 / NFR-4: generate a rewritten spec folding in ONLY the user-accepted
  * suggestions, record the accept/reject decisions, and append a new version to
  * the spec's history with a change summary vs the previous version (FR-17).
  * Returns { reviewId, markdown, version }.
  */
-export async function rewriteSpec(userId, specId, { selectedIds, edits } = {}) {
+export async function rewriteSpec(userId, specId, { selectedIds, edits, rejectedIds: rejectedInput } = {}) {
   const spec = await getSpec(userId, specId);
   if (!spec.latestReview) {
     throw httpError(400, 'Run a review before generating an updated spec');
@@ -256,17 +293,34 @@ export async function rewriteSpec(userId, specId, { selectedIds, edits } = {}) {
   const accepted = new Set(acceptedIds);
   const editMap = edits && typeof edits === 'object' ? edits : {};
 
-  const filteredResult = { ...result, suggestedRequirements: selectedSuggestions };
+  // Gate the author's own requirements: adopt an AI rewrite only where accepted.
+  const { resolved: resolvedExisting, improvementsAccepted } =
+    resolveExistingRequirements(result.existingRequirements, selectedIds, edits);
 
-  const { markdown } = await runRewrite(
+  const filteredResult = {
+    ...result,
+    suggestedRequirements: selectedSuggestions,
+    existingRequirements: resolvedExisting,
+  };
+
+  const { markdown: rewriteMd } = await runRewrite(
     { title: spec.title, content: spec.content, context: spec.context },
     filteredResult
   );
 
-  // Record decisions on the review (FR-15 / provenance).
+  // Append a self-verifying Definition of Done built from the accepted
+  // requirements. Idempotent: regenerating an already-built spec (including
+  // historic ones predating this section) replaces any prior copy rather than
+  // stacking a second one.
+  const markdown = withDefinitionOfDone(rewriteMd, filteredResult);
+
+  // Record decisions on the review (FR-15 / provenance). Accepted spans both new
+  // suggestions and adopted improvements; explicit existing-requirement rejects
+  // are folded in so the per-card state restores on reload.
+  const explicitRejected = Array.isArray(rejectedInput) ? rejectedInput : [];
   const decisions = {
-    accepted: [...accepted],
-    rejected: rejectedIds,
+    accepted: [...new Set([...accepted, ...improvementsAccepted])],
+    rejected: [...new Set([...rejectedIds, ...explicitRejected])],
     edits: editMap,
     decidedAt: new Date().toISOString(),
   };

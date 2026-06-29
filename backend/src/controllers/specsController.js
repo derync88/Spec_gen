@@ -88,8 +88,8 @@ export async function review(req, res, next) {
 
 export async function rewrite(req, res, next) {
   try {
-    const { selectedIds, edits } = req.body || {};
-    const result = await specService.rewriteSpec(req.userId, req.params.id, { selectedIds, edits });
+    const { selectedIds, edits, rejectedIds } = req.body || {};
+    const result = await specService.rewriteSpec(req.userId, req.params.id, { selectedIds, edits, rejectedIds });
     res.json({ rewrite: result });
   } catch (err) {
     next(err);

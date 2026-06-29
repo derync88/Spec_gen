@@ -88,3 +88,93 @@ describe('ReviewView catalogue composition (Phase 3)', () => {
     expect(screen.getAllByText('constraint').length).toBeGreaterThan(0);
   });
 });
+
+const combinedReview = {
+  provider: 'mock',
+  result: {
+    coverageScore: 52,
+    coverageByCategory: [
+      { category: 'Functional Suitability', standard: 'ISO 25010', status: 'partial', score: 60, notes: 'Alternate flows under-specified.' },
+      { category: 'Security', standard: 'ISO 25010', status: 'missing', score: 20, notes: 'No authn/authz found.' },
+    ],
+    existingRequirements: [
+      {
+        id: 'FR-1',
+        type: 'functional',
+        text: 'The system should let users do the main task.',
+        smart: { specific: false, measurable: false, achievable: true, relevant: true, testable: false },
+        improvedSmart: { specific: true, measurable: true, achievable: true, relevant: true, testable: true },
+        issues: ['Vague ("main task", "should")', 'Not measurable'],
+        improvedText: 'The system shall allow an authenticated user to create, view, edit, and delete a record within 2 seconds.',
+      },
+    ],
+    suggestedRequirements: [
+      { id: 'FR-5', source: 'model-suggested', type: 'functional', text: 'Validate boundary inputs', priority: 'must' },
+      { id: 'NFR-9', source: 'model-suggested', type: 'non-functional', category: 'Security', text: 'Require authentication on all endpoints', priority: 'must' },
+    ],
+  },
+};
+
+describe('ReviewView combined requirement card', () => {
+  it('shows what was written, the SMART rating, the feedback, and the rewrite on one card', () => {
+    render(<ReviewView review={combinedReview} selection={{}} edits={{}} onSelect={noop} onEdit={noop} />);
+    expect(screen.getByText('Your requirements — reviewed')).toBeInTheDocument();
+    // What was written
+    expect(screen.getByText(/let users do the main task/)).toBeInTheDocument();
+    // Feedback against SMART
+    expect(screen.getByText(/Not measurable/)).toBeInTheDocument();
+    // The suggested rewrite
+    expect(screen.getByText(/create, view, edit, and delete a record/)).toBeInTheDocument();
+  });
+
+  it('rates SMART for BOTH the original and the rewrite, captioned per column', () => {
+    render(<ReviewView review={combinedReview} selection={{}} edits={{}} onSelect={noop} onEdit={noop} />);
+    // Two SMART rows, each captioned and aria-labelled to its version.
+    expect(screen.getByLabelText('SMART rating of what you wrote')).toBeInTheDocument();
+    expect(screen.getByLabelText('SMART rating of the suggested rewrite')).toBeInTheDocument();
+    // The original fails Specific (S✗); the rewrite passes it (S✓).
+    expect(screen.getByText('S✗')).toBeInTheDocument();
+    expect(screen.getByText('S✓')).toBeInTheDocument();
+  });
+
+  it('gives the author an accept-rewrite / keep-mine / edit gate', () => {
+    render(<ReviewView review={combinedReview} selection={{}} edits={{}} onSelect={noop} onEdit={noop} />);
+    expect(screen.getByRole('button', { name: 'Accept rewrite' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Keep mine' })).toBeInTheDocument();
+  });
+
+  it('Accept rewrite emits an accepted decision for the requirement id', async () => {
+    const onSelect = vi.fn();
+    const { default: userEvent } = await import('@testing-library/user-event');
+    const user = userEvent.setup();
+    render(<ReviewView review={combinedReview} selection={{}} edits={{}} onSelect={onSelect} onEdit={noop} />);
+    await user.click(screen.getByRole('button', { name: 'Accept rewrite' }));
+    expect(onSelect).toHaveBeenCalledWith('FR-1', 'accepted');
+  });
+
+  it('keeps new gap suggestions in their own labelled section', () => {
+    render(<ReviewView review={combinedReview} selection={{}} edits={{}} onSelect={noop} onEdit={noop} />);
+    expect(screen.getByText(/Suggested additional functional requirements/)).toBeInTheDocument();
+    expect(screen.getByText('Validate boundary inputs')).toBeInTheDocument();
+  });
+});
+
+describe('ReviewView path to 100', () => {
+  it('ranks the uncovered categories biggest-shortfall-first and ties them to suggestions', () => {
+    render(<ReviewView review={combinedReview} selection={{}} edits={{}} onSelect={noop} onEdit={noop} />);
+    expect(screen.getByText('How to reach 100')).toBeInTheDocument();
+    // Security (20/100, +80) outranks Functional Suitability (60/100, +40).
+    const gains = screen.getAllByText(/^\+\d+$/).map((n) => n.textContent);
+    expect(gains[0]).toBe('+80');
+    expect(gains).toContain('+40');
+    // The Security action links to the matching suggestion id.
+    expect(screen.getByText(/Accept 0\/1 suggestion below \(NFR-9\)/)).toBeInTheDocument();
+  });
+
+  it('reflects live progress as a linked suggestion is accepted', () => {
+    render(
+      <ReviewView review={combinedReview} selection={{ 'NFR-9': 'accepted' }} edits={{}} onSelect={noop} onEdit={noop} />
+    );
+    expect(screen.getByText(/✓ Accept 1\/1 suggestion below \(NFR-9\)/)).toBeInTheDocument();
+  });
+});

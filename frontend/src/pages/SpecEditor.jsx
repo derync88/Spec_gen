@@ -81,6 +81,15 @@ export default function SpecEditor() {
   );
   const acceptedCount = suggestions.filter((s) => selection[s.id] === 'accepted').length;
 
+  const existingReqs = useMemo(
+    () => (Array.isArray(review?.result?.existingRequirements) ? review.result.existingRequirements : []),
+    [review]
+  );
+  // Adopted rewrites of the author's own requirements (only those with a rewrite count).
+  const improvementsAcceptedCount = existingReqs.filter(
+    (e) => e.improvedText && selection[e.id] === 'accepted'
+  ).length;
+
   const specFields = () => ({ title, content, context, projectType, objective, repoUrl });
 
   const save = async () => {
@@ -160,10 +169,14 @@ export default function SpecEditor() {
   const updateSpecFromReview = async () => {
     setBusy('rewriting'); setError(''); setStatus('');
     try {
-      const selectedIds = suggestions.filter((s) => selection[s.id] === 'accepted').map((s) => s.id);
+      // The selection map keys both new suggestions and the author's own
+      // requirements (accept = adopt the AI rewrite). Send the full union so the
+      // gate resolves each; ids are disjoint across the two streams.
+      const selectedIds = Object.keys(selection).filter((rid) => selection[rid] === 'accepted');
+      const rejectedIds = Object.keys(selection).filter((rid) => selection[rid] === 'rejected');
       const acceptedEdits = {};
       selectedIds.forEach((sid) => { if (edits[sid]) acceptedEdits[sid] = edits[sid]; });
-      const { rewrite } = await api.rewriteSpec(id, { selectedIds, edits: acceptedEdits });
+      const { rewrite } = await api.rewriteSpec(id, { selectedIds, edits: acceptedEdits, rejectedIds });
       setRewrittenMd(rewrite.markdown);
       setShowDiff(false);
       await refreshVersions();
@@ -422,11 +435,14 @@ export default function SpecEditor() {
         <>
           <div className="card action-bar">
             <div>
-              <strong>{acceptedCount} of {suggestions.length} suggestions accepted</strong>
+              <strong>
+                {improvementsAcceptedCount} rewrite{improvementsAcceptedCount === 1 ? '' : 's'} adopted ·{' '}
+                {acceptedCount} new requirement{acceptedCount === 1 ? '' : 's'} added
+              </strong>
               <div className="muted" style={{ fontSize: '0.85rem' }}>
-                {acceptedCount === 0
-                  ? 'Accept the suggestions you want, then build your spec. Only accepted items are included.'
-                  : `Your spec will fold in ${acceptedCount} accepted requirement${acceptedCount === 1 ? '' : 's'}.`}
+                {acceptedCount === 0 && improvementsAcceptedCount === 0
+                  ? 'Your original wording is kept. Accept a rewrite or a new requirement to fold it in — nothing changes your spec until you do.'
+                  : 'Your spec keeps your original wording except where you accepted a rewrite, plus the new requirements you accepted.'}
               </div>
             </div>
             <div className="spacer" />
@@ -452,13 +468,19 @@ export default function SpecEditor() {
             <div>
               <strong>Updated specification</strong>
               <span className="muted" style={{ fontSize: '0.85rem', marginLeft: '0.5rem' }}>
-                Goal · scope · constraints · outcomes (FR/NFR) · success criteria
+                Goal · scope · constraints · outcomes (FR/NFR) · success criteria · Definition of Done
               </span>
             </div>
             <div className="spacer" />
             <button onClick={toggleDiff}>{showDiff ? 'Hide changes' : '± Highlight changes'}</button>
             <button onClick={copySpec}>⧉ Copy</button>
-            <button onClick={updateSpecFromReview} disabled={!!busy}>↻ Regenerate</button>
+            <button
+              onClick={updateSpecFromReview}
+              disabled={!!busy}
+              title="Rebuild from your accepted requirements and add an up-to-date, self-verifying Definition of Done"
+            >
+              {busy === 'rewriting' ? 'Regenerating…' : '↻ Regenerate'}
+            </button>
             <button className="primary" onClick={exportSpec}>⬇ Export .md</button>
           </div>
           <div className="card">

@@ -141,9 +141,10 @@ export const OUTPUT_SCHEMA_DESCRIPTION = `Return JSON matching this TypeScript s
       "id": string,                   // e.g. "FR-1" / "NFR-1" (assign if the draft has none)
       "text": string,
       "type": "functional" | "non-functional",
-      "smart": { "specific": boolean, "measurable": boolean, "achievable": boolean, "relevant": boolean, "testable": boolean },
+      "smart": { "specific": boolean, "measurable": boolean, "achievable": boolean, "relevant": boolean, "testable": boolean },  // SMART rating of the text AS WRITTEN
       "issues": string[],             // quality problems (ambiguity, untestable, compound, etc.)
-      "improvedText": string          // a rewritten, standards-compliant version
+      "improvedText": string,         // a rewritten, standards-compliant version
+      "improvedSmart": { "specific": boolean, "measurable": boolean, "achievable": boolean, "relevant": boolean, "testable": boolean }  // SMART rating of improvedText (assess it honestly; usually all true)
     }
   ],
   "suggestedRequirements": [          // NEW requirements needed for full coverage (all are model-introduced)
@@ -214,9 +215,14 @@ specification into a single, polished, implementation-ready specification.
 
 You will be given the original draft, project context, and a SELECTION of
 review findings the author has explicitly ACCEPTED. Incorporate ONLY those
-accepted suggestions plus the improved versions of existing requirements. Do
-NOT re-introduce suggestions that are not in the accepted selection — the
-author has deliberately excluded them (FR-1 / no silent scope injection).
+accepted suggestions. Do NOT re-introduce suggestions that are not in the
+accepted selection — the author has deliberately excluded them (FR-1 / no silent
+scope injection).
+
+For each item in "existingRequirements", its "text" field is AUTHORITATIVE: it
+already reflects the author's decision (their original wording, or the rewrite
+they accepted). Use that "text" VERBATIM — do NOT further rewrite, "improve", or
+re-word it, and ignore any "improvedText".
 
 Output GitHub-flavoured Markdown ONLY — no code fences, no commentary before or
 after. Use this EXACT structure and these exact headings:

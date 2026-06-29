@@ -38,7 +38,7 @@ function reconcile(rows, editedId) {
 
 const joinRows = (rows) => rows.filter((r) => r.text.trim() !== '').map((r) => r.text.trim()).join('\n');
 
-function RequirementRow({ idLabel, row, onChange }) {
+function RequirementRow({ idLabel, row, onChange, onDelete, canDelete }) {
   const [matches, setMatches] = useState([]);
   const text = row.text;
 
@@ -61,12 +61,25 @@ function RequirementRow({ idLabel, row, onChange }) {
     <div className="req-row">
       <span className="req-gutter" aria-hidden="true">{idLabel}</span>
       <div className="req-main">
-        <input
-          value={text}
-          onChange={(e) => onChange(row.id, e.target.value)}
-          placeholder="Describe one requirement…"
-          aria-label={`Requirement ${idLabel}`}
-        />
+        <div className="req-input-line">
+          <input
+            value={text}
+            onChange={(e) => onChange(row.id, e.target.value)}
+            placeholder="Describe one requirement…"
+            aria-label={`Requirement ${idLabel}`}
+          />
+          {canDelete && (
+            <button
+              type="button"
+              className="req-delete"
+              onClick={() => onDelete(row.id)}
+              aria-label={`Delete requirement ${idLabel}`}
+              title={`Delete ${idLabel}`}
+            >
+              ×
+            </button>
+          )}
+        </div>
         {matches.length > 0 && (
           <div className="req-matches">
             <span className="muted" style={{ fontSize: '0.75rem' }}>Catalogue:</span>
@@ -105,11 +118,33 @@ export default function RequirementsEditor({ value, onChange }) {
     });
   };
 
+  // Remove a row entirely. Because IDs (FR-1, FR-2, …) are positional, the
+  // remaining rows re-number automatically on the next render.
+  const handleRowDelete = (id) => {
+    setRows((prev) => {
+      const next = reconcile(prev.filter((r) => r.id !== id), null);
+      const content = joinRows(next);
+      lastEmitted.current = content;
+      onChange(content);
+      return next;
+    });
+  };
+
   return (
     <div className="req-editor">
-      {rows.map((row, i) => (
-        <RequirementRow key={row.id} idLabel={`FR-${i + 1}`} row={row} onChange={handleRowChange} />
-      ))}
+      {rows.map((row, i) => {
+        const isTrailingEmpty = i === rows.length - 1 && row.text.trim() === '';
+        return (
+          <RequirementRow
+            key={row.id}
+            idLabel={`FR-${i + 1}`}
+            row={row}
+            onChange={handleRowChange}
+            onDelete={handleRowDelete}
+            canDelete={!isTrailingEmpty}
+          />
+        );
+      })}
     </div>
   );
 }
