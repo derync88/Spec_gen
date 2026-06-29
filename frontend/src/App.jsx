@@ -6,6 +6,7 @@ import Login from './pages/Login.jsx';
 import Register from './pages/Register.jsx';
 import Dashboard from './pages/Dashboard.jsx';
 import SpecEditor from './pages/SpecEditor.jsx';
+import CoverageReport from './pages/CoverageReport.jsx';
 
 function TopBar() {
   const { user, logout } = useAuth();
@@ -51,6 +52,8 @@ export default function App() {
           <Route path="/" element={<Dashboard />} />
           <Route path="/specs/:id" element={<SpecEditor />} />
         </Route>
+        {/* Standalone report window (opened in a new tab from the review): no sidebar. */}
+        <Route path="/specs/:id/coverage" element={<CoverageReport />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </>

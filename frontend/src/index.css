@@ -248,6 +248,11 @@ th { color: var(--muted); font-weight: 600; }
 .suggestion.is-accepted { border-color: #2a5c33; box-shadow: inset 3px 0 0 var(--good); }
 .suggestion.is-rejected { opacity: 0.55; border-style: dashed; }
 
+/* Link to the standalone full coverage report (top-right of the review). */
+.report-link { align-self: center; white-space: nowrap; font-weight: 600; }
+.report .container, .container.report { max-width: 920px; }
+@media print { .topbar, .report-link, .report button { display: none; } }
+
 /* "How to reach 100" — actionable path derived from the coverage rubric. */
 .path-100 { margin-top: 0.9rem; padding-top: 0.8rem; border-top: 1px solid var(--border); }
 .path-head { margin-bottom: 0.5rem; }

@@ -159,22 +159,24 @@ describe('ReviewView combined requirement card', () => {
   });
 });
 
-describe('ReviewView path to 100', () => {
-  it('ranks the uncovered categories biggest-shortfall-first and ties them to suggestions', () => {
-    render(<ReviewView review={combinedReview} selection={{}} edits={{}} onSelect={noop} onEdit={noop} />);
-    expect(screen.getByText('How to reach 100')).toBeInTheDocument();
-    // Security (20/100, +80) outranks Functional Suitability (60/100, +40).
-    const gains = screen.getAllByText(/^\+\d+$/).map((n) => n.textContent);
-    expect(gains[0]).toBe('+80');
-    expect(gains).toContain('+40');
-    // The Security action links to the matching suggestion id.
-    expect(screen.getByText(/Accept 0\/1 suggestion below \(NFR-9\)/)).toBeInTheDocument();
-  });
-
-  it('reflects live progress as a linked suggestion is accepted', () => {
+describe('ReviewView no longer shows the coverage report sections', () => {
+  it('omits coverage score, how-to-reach-100, category table, gaps, ambiguities and traceability', () => {
     render(
-      <ReviewView review={combinedReview} selection={{ 'NFR-9': 'accepted' }} edits={{}} onSelect={noop} onEdit={noop} />
+      <ReviewView
+        review={{ result: { ...combinedReview.result, gaps: [{ area: 'Errors', description: 'x', severity: 'high' }], ambiguities: [{ text: 'fast', problem: 'vague', suggestion: 'measure' }], traceability: { orphans: [{ item: 'FR-1', issue: 'no goal' }] } } }}
+        selection={{}}
+        edits={{}}
+        onSelect={noop}
+        onEdit={noop}
+      />
     );
-    expect(screen.getByText(/✓ Accept 1\/1 suggestion below \(NFR-9\)/)).toBeInTheDocument();
+    expect(screen.queryByText('How to reach 100')).not.toBeInTheDocument();
+    expect(screen.queryByText('Coverage by category')).not.toBeInTheDocument();
+    expect(screen.queryByText('Coverage score')).not.toBeInTheDocument();
+    expect(screen.queryByText('Coverage gaps')).not.toBeInTheDocument();
+    expect(screen.queryByText('Ambiguities to resolve')).not.toBeInTheDocument();
+    expect(screen.queryByText(/Traceability/)).not.toBeInTheDocument();
+    // The per-requirement review still shows.
+    expect(screen.getByText('Your requirements — reviewed')).toBeInTheDocument();
   });
 });

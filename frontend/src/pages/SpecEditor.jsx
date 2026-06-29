@@ -446,6 +446,9 @@ export default function SpecEditor() {
               </div>
             </div>
             <div className="spacer" />
+            <Link to={`/specs/${id}/coverage`} target="_blank" rel="noopener" className="report-link">
+              📊 Full coverage report ↗
+            </Link>
             <button onClick={exportReview}>⬇ Export review</button>
             <button className="primary" onClick={updateSpecFromReview} disabled={!!busy}>
               {busy === 'rewriting' ? 'Building…' : '📝 Build spec from accepted'}
