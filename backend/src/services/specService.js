@@ -4,7 +4,7 @@ import { runReview, runRewrite, runQuestions, runInferDelivered } from './ai/ind
 import { computeChangeSummary } from '../utils/diff.js';
 import { withDefinitionOfDone } from '../utils/definitionOfDone.js';
 import { reconcileRequirementIds, fingerprint } from './requirementIds.js';
-import { composeForReview } from './compositionService.js';
+import { composeForReview, attachCapabilities } from './compositionService.js';
 import { fetchRepoSnapshot } from './githubService.js';
 
 // Columns common to every spec read, so create/get/update return the same shape.
@@ -145,6 +145,13 @@ export async function reviewSpec(userId, specId, { questions, answers } = {}) {
     result.silentDefaults = composed.silentDefaults;           // FR-C7.3 referenced, not emitted
     result.packsAttached = composed.packsAttached;             // FR-CMP-02
     result.constraintRatio = composed.constraint;              // NFR-C5 guard
+  }
+
+  // Tag the author's own requirements with their best-matching catalogue
+  // capability (zero-LLM) so the review's compared cards show the same 🗂 label
+  // the suggestions carry.
+  if (reviewData.result && Array.isArray(reviewData.result.existingRequirements)) {
+    reviewData.result.existingRequirements = attachCapabilities(reviewData.result.existingRequirements);
   }
 
   // FR-8 / FR-3: assign stable IDs + provenance to every existing and

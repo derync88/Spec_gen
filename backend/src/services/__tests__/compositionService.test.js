@@ -8,6 +8,7 @@ import {
   crossCuttingPackIds,
   constraintRatio,
   constraintPhrasingWarnings,
+  attachCapabilities,
 } from '../compositionService.js';
 
 const ARCHETYPE = {
@@ -38,6 +39,7 @@ test('FR-C5/C7: candidates carry provenance, prescription, and checkability', ()
   const { candidates } = archetypeToCandidates(ARCHETYPE);
   const constraint = candidates.find((c) => c.prescription === 'constraint');
   assert.equal(constraint.sourceArchetypeId, 'foundation.authorisation');
+  assert.equal(constraint.sourceArchetypeName, 'Authorisation');
   assert.equal(constraint.source, 'model-suggested');
   assert.equal(constraint.priority, 'must');
   assert.equal(constraint.checkability, 'High');
@@ -90,4 +92,22 @@ test('FR-C10: implementation-phrased constraints are flagged', () => {
     { prescription: 'constraint', text: 'No data is lost during migration' },
   ]);
   assert.equal(warnings.length, 1);
+});
+
+test('attachCapabilities tags the author requirements with their best catalogue capability', () => {
+  const archetypes = [
+    { id: 'foundation.identity', name: 'Identity & Access', classifier_hints: ['log in', 'login', 'password', 'sign in'] },
+    { id: 'foundation.audit', name: 'Audit & Logging', classifier_hints: ['audit', 'audit log'] },
+  ];
+  const out = attachCapabilities(
+    [
+      { id: 'FR-1', text: 'Users can log in with a password' },     // → Identity & Access
+      { id: 'FR-2', text: 'Calculate the monthly portfolio total' }, // → nothing
+      { id: 'FR-3', text: 'Audit log every action', sourceArchetypeName: 'Preset' }, // not overridden
+    ],
+    archetypes
+  );
+  assert.equal(out[0].sourceArchetypeName, 'Identity & Access');
+  assert.equal(out[1].sourceArchetypeName, undefined);
+  assert.equal(out[2].sourceArchetypeName, 'Preset');
 });

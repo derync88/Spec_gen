@@ -17,6 +17,10 @@ const SOURCE_LABELS = {
 // Prescription → badge class (reuses MoSCoW colours): constraint binds, advisory guides.
 const PRESCRIPTION_CLASS = { constraint: 'must', advisory: 'should', 'silent-default': 'could' };
 
+// Human-readable capability for a requirement: the catalogue archetype name for
+// catalogue-derived items, else its ISO category. Never the raw archetype slug.
+const capabilityLabel = (req) => req.sourceArchetypeName || req.category || null;
+
 /** A single suggested requirement with an accept/reject/edit gate (FR-1, FR-3, FR-20). */
 function SuggestionCard({ req, status, editText, onSelect, onEdit }) {
   const [editing, setEditing] = useState(false);
@@ -33,7 +37,7 @@ function SuggestionCard({ req, status, editText, onSelect, onEdit }) {
           <span className={`badge ${PRESCRIPTION_CLASS[req.prescription] || 'could'}`}>{req.prescription}</span>
         )}
         <span className="badge source">{SOURCE_LABELS[req.source] || SOURCE_LABELS['model-suggested']}</span>
-        {req.sourceArchetypeId && <span className="badge">{req.sourceArchetypeId}</span>}
+        {capabilityLabel(req) && <span className="badge capability">🗂 {capabilityLabel(req)}</span>}
         <span className="req-id">{req.id}</span>
       </div>
 
@@ -43,9 +47,8 @@ function SuggestionCard({ req, status, editText, onSelect, onEdit }) {
       </p>
 
       <div className="meta">
-        {req.category && <span>{req.category}</span>}
-        {req.standardRef && <span> · {req.standardRef}</span>}
-        {req.verification && <span> · ✔ {req.verification}</span>}
+        {req.standardRef && <span>{req.standardRef}</span>}
+        {req.verification && <span>{req.standardRef ? ' · ' : ''}✔ {req.verification}</span>}
         {req.istqbTechnique && <span> · 🧪 {req.istqbTechnique}</span>}
       </div>
 
@@ -165,6 +168,7 @@ function YourRequirementCard({ req, status, editText, onSelect, onEdit }) {
       <div className="req-head">
         <span className={`badge ${isNfr ? 'nfr' : 'fr'}`}>{isNfr ? 'NFR' : 'FR'}</span>
         <span className="badge source user">Your requirement</span>
+        {capabilityLabel(req) && <span className="badge capability">🗂 {capabilityLabel(req)}</span>}
         <span className="req-id">{req.id}</span>
       </div>
 
@@ -276,12 +280,13 @@ function ArchetypeGroup({ archetypeId, reqs, selection, edits, onSelect, onEdit 
   const allAccepted = ids.every((id) => selection[id] === 'accepted');
   const allRejected = ids.every((id) => selection[id] === 'rejected');
   const bulk = (status) => ids.forEach((id) => onSelect(id, status));
+  const capability = reqs[0]?.sourceArchetypeName || archetypeId;
 
   return (
     <div style={{ marginTop: '1rem' }}>
       <div className="action-bar">
         <div>
-          <strong>{archetypeId}</strong>{' '}
+          <strong>🗂 {capability}</strong>{' '}
           <span className="muted" style={{ fontSize: '0.82rem' }}>· {reqs.length} requirement{reqs.length === 1 ? '' : 's'}</span>
         </div>
         <div className="spacer" />

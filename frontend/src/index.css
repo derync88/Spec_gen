@@ -227,6 +227,7 @@ th { color: var(--muted); font-weight: 600; }
 .badge.wont { color: var(--muted); border-color: var(--border); }
 .badge.source { color: var(--accent-2); border-color: #3a2a5c; }
 .badge.source.user { color: var(--good); border-color: #2a5c33; }
+.badge.capability { color: var(--accent); border-color: #2a3a5c; background: rgba(110, 168, 254, 0.08); }
 .badge.edited { color: var(--warn); border-color: #5c4326; margin-left: 0.5rem; }
 
 /* Action bars: one primary action, others subordinate (FR-18). */

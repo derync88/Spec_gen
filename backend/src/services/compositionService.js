@@ -14,7 +14,35 @@
 
 import { query } from '../db/pool.js';
 import { getArchetypesByIds, resolveRequires, archetypeMap } from './catalogue/index.js';
+import { keywordPrefilter } from './catalogue/match.js';
 import { fingerprint } from './requirementIds.js';
+
+// A single strong keyword hit (confidence 0.55) is enough to suggest a capability;
+// the label is a hint on the review card, not a binding classification.
+const MIN_CAPABILITY_CONFIDENCE = 0.55;
+
+/**
+ * Tag each requirement with its best-matching catalogue capability NAME via the
+ * zero-LLM keyword match (same signal the draft editor shows live). Used to label
+ * the author's own requirements on the review's compared cards. Requirements that
+ * already carry a capability (catalogue-derived) or match nothing are left as-is.
+ */
+export function attachCapabilities(requirements, archetypes = [...archetypeMap().values()]) {
+  const list = Array.isArray(requirements) ? requirements : [];
+  if (!list.length) return list;
+  const map = new Map(archetypes.map((a) => [a.id, a]));
+  const { perRequirement } = keywordPrefilter(
+    list.map((r, i) => ({ id: i, text: r.text })),
+    archetypes
+  );
+  return list.map((req, i) => {
+    if (req.sourceArchetypeName) return req;
+    const top = perRequirement[i]?.candidates?.[0];
+    if (!top || top.confidence < MIN_CAPABILITY_CONFIDENCE) return req;
+    const name = map.get(top.archetypeId)?.name;
+    return name ? { ...req, sourceArchetypeName: name } : req;
+  });
+}
 
 /** Map a prescription level onto the existing MoSCoW model (FR-C7). */
 export function prescriptionToPriority(prescription) {
@@ -69,6 +97,7 @@ export function archetypeToCandidates(archetype) {
       acceptanceCriteria: acFor(item, checkability),
       source: 'model-suggested',          // FR-C5.1: catalogue items are model-suggested…
       sourceArchetypeId: archetype.id,     // …with the originating archetype retrievable
+      sourceArchetypeName: archetype.name, // human-readable capability (for review + spec grouping)
       prescription,
       checkability,
     });

@@ -141,6 +141,7 @@ export const OUTPUT_SCHEMA_DESCRIPTION = `Return JSON matching this TypeScript s
       "id": string,                   // e.g. "FR-1" / "NFR-1" (assign if the draft has none)
       "text": string,
       "type": "functional" | "non-functional",
+      "category": string,             // ALWAYS set: a concise functional-area / capability label (1-3 words, Title Case) e.g. "Authentication", "Public Pages", "Onboarding", "Reporting", "Notifications". Use consistent names across requirements so related ones share a category.
       "smart": { "specific": boolean, "measurable": boolean, "achievable": boolean, "relevant": boolean, "testable": boolean },  // SMART rating of the text AS WRITTEN
       "issues": string[],             // quality problems (ambiguity, untestable, compound, etc.)
       "improvedText": string,         // a rewritten, standards-compliant version
@@ -256,6 +257,14 @@ it matters.
 ### Non-Functional Requirements
 - User-facing quality outcomes (performance, security, reliability, usability,
   accessibility), each prefixed with its stable ID (e.g. "NFR-1 — ...").
+
+Capability grouping — when accepted requirements carry a "sourceArchetypeName",
+organise the Functional (and Non-Functional) lists under "#### {sourceArchetypeName}"
+sub-headings so each capability reads as a complete slice; put requirements with
+no sourceArchetypeName under a final "#### Core requirements". If NO requirement
+has a sourceArchetypeName, keep flat lists (no sub-headings). NEVER print the
+"sourceArchetypeId", "layer", "axis", "confidence", or any other catalogue
+identifier/metadata — use the human-readable name only, as a grouping heading.
 
 ## Success Criteria
 - Measurable, verifiable criteria (SMART) that define "done". Where a target is

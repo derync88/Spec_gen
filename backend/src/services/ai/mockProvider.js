@@ -84,12 +84,13 @@ export async function review(spec) {
     existingRequirements: [
       {
         id: 'FR-1',
-        text: 'The system should let users do the main task.',
+        text: 'Users should be able to log in to their account.',
         type: 'functional',
+        category: 'Authentication',
         smart: { specific: false, measurable: false, achievable: true, relevant: true, testable: false },
         improvedSmart: { specific: true, measurable: true, achievable: true, relevant: true, testable: true },
-        issues: ['Vague ("main task", "should")', 'Not measurable', 'Not independently testable'],
-        improvedText: 'The system shall allow an authenticated user to create, view, edit, and delete a {primary entity}, with each operation confirmed within 2 seconds.',
+        issues: ['Vague ("log in" — no method or success/failure behaviour)', 'Not measurable', 'Not independently testable'],
+        improvedText: 'The system shall authenticate a user by email and password, establishing a session on success and returning HTTP 401 on failure, within 2 seconds.',
       },
     ],
     suggestedRequirements: [
@@ -166,6 +167,40 @@ export async function review(spec) {
   return { provider: 'mock', model: 'mock-reviewer', text: JSON.stringify(result) };
 }
 
+const CORE_CAPABILITY = 'Core requirements';
+
+/** Group requirements by their catalogue capability (human name), Core last. */
+function groupByCapability(reqs) {
+  const groups = new Map();
+  for (const req of reqs) {
+    const cap = (req.sourceArchetypeName && req.sourceArchetypeName.trim()) || CORE_CAPABILITY;
+    if (!groups.has(cap)) groups.set(cap, []);
+    groups.get(cap).push(req);
+  }
+  return groups;
+}
+
+/**
+ * Render a requirement subsection. When catalogue capabilities are present, the
+ * requirements are organised under `#### {Capability}` headings (Core last) so an
+ * agent reads complete capability slices; raw archetype IDs are never emitted.
+ * With no catalogue capability it stays a flat list to avoid a noisy lone "Core"
+ * heading.
+ */
+function renderRequirementGroups(reqs, fmt, fallback) {
+  if (!reqs.length) return [fallback];
+  const groups = groupByCapability(reqs);
+  const caps = [...groups.keys()];
+  if (caps.length === 1 && caps[0] === CORE_CAPABILITY) return reqs.map(fmt);
+  const ordered = caps.filter((c) => c !== CORE_CAPABILITY).concat(groups.has(CORE_CAPABILITY) ? [CORE_CAPABILITY] : []);
+  const lines = [];
+  for (const cap of ordered) {
+    lines.push(`#### ${cap}`);
+    for (const req of groups.get(cap)) lines.push(fmt(req));
+  }
+  return lines;
+}
+
 /** Mock rewrite — builds a structured spec from the spec + review result. */
 export async function rewrite(spec, reviewResult) {
   const title = spec.title || 'Untitled spec';
@@ -220,14 +255,18 @@ export async function rewrite(spec, reviewResult) {
     '## User-Facing Outcomes',
     '',
     '### Functional Requirements',
-    ...(fr.length
-      ? fr.map((req) => `- ${req.id ? `${req.id} — ` : ''}${req.text}${req.acceptanceCriteria?.[0] ? ` (e.g. ${req.acceptanceCriteria[0]})` : ''}`)
-      : ['- Users can complete the primary task end to end.']),
+    ...renderRequirementGroups(
+      fr,
+      (req) => `- ${req.id ? `${req.id} — ` : ''}${req.text}${req.acceptanceCriteria?.[0] ? ` (e.g. ${req.acceptanceCriteria[0]})` : ''}`,
+      '- Users can complete the primary task end to end.'
+    ),
     '',
     '### Non-Functional Requirements',
-    ...(nfr.length
-      ? nfr.map((req) => `- ${req.id ? `${req.id} — ` : ''}${req.text}`)
-      : ['- The system responds promptly and protects user data.']),
+    ...renderRequirementGroups(
+      nfr,
+      (req) => `- ${req.id ? `${req.id} — ` : ''}${req.text}`,
+      '- The system responds promptly and protects user data.'
+    ),
     '',
     '## Success Criteria',
     ...buildSuccessCriteria(r),

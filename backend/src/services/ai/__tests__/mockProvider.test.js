@@ -29,3 +29,24 @@ test('mock rewrite includes ONLY the suggestions it is given (the gate)', async 
   // A requirement the user did not accept must not appear.
   assert.doesNotMatch(markdown, /reject unauthenticated requests/);
 });
+
+test('rewrite groups requirements under capability headings and never leaks archetype IDs', async () => {
+  const accepted = {
+    suggestedRequirements: [
+      { id: 'FR-1', type: 'functional', text: 'Sign-in works', sourceArchetypeId: 'foundation.identity', sourceArchetypeName: 'Identity & Access' },
+      { id: 'FR-2', type: 'functional', text: 'Inputs are validated', category: 'Input validation' },
+    ],
+  };
+  const { markdown } = await mock.rewrite({ title: 'Demo', context: '' }, accepted);
+  // Capability heading uses the human-readable name; the model-only item lands under Core.
+  assert.match(markdown, /#### Identity & Access/);
+  assert.match(markdown, /#### Core requirements/);
+  // The internal archetype slug is never emitted.
+  assert.doesNotMatch(markdown, /foundation\.identity/);
+});
+
+test('rewrite stays flat (no capability sub-headings) when nothing has a catalogue capability', async () => {
+  const accepted = { suggestedRequirements: [{ id: 'FR-1', type: 'functional', text: 'Just a plain requirement' }] };
+  const { markdown } = await mock.rewrite({ title: 'Demo', context: '' }, accepted);
+  assert.doesNotMatch(markdown, /#### /);
+});

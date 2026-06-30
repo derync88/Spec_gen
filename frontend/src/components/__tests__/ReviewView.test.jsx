@@ -58,8 +58,8 @@ const catalogueReview = {
     constraintRatio: { warning: 'Constraints are 50% of composed requirements (>20%) — re-check.' },
     catalogueProbes: [{ text: 'No cross-tenant leakage', prescription: 'constraint', archetypeName: 'Tenancy' }],
     suggestedRequirements: [
-      { id: 'FR-2', source: 'model-suggested', sourceArchetypeId: 'foundation.authorisation', prescription: 'constraint', type: 'functional', text: 'Deny by default' },
-      { id: 'FR-3', source: 'model-suggested', sourceArchetypeId: 'foundation.authorisation', prescription: 'advisory', type: 'functional', text: 'Permission model governs access' },
+      { id: 'FR-2', source: 'model-suggested', sourceArchetypeId: 'foundation.authorisation', sourceArchetypeName: 'Authorisation', prescription: 'constraint', type: 'functional', text: 'Deny by default' },
+      { id: 'FR-3', source: 'model-suggested', sourceArchetypeId: 'foundation.authorisation', sourceArchetypeName: 'Authorisation', prescription: 'advisory', type: 'functional', text: 'Permission model governs access' },
     ],
   },
 };
@@ -87,6 +87,13 @@ describe('ReviewView catalogue composition (Phase 3)', () => {
     render(<ReviewView review={catalogueReview} selection={{}} edits={{}} onSelect={noop} onEdit={noop} />);
     expect(screen.getAllByText('constraint').length).toBeGreaterThan(0);
   });
+
+  it('shows the readable capability name, never the raw archetype slug', () => {
+    render(<ReviewView review={catalogueReview} selection={{}} edits={{}} onSelect={noop} onEdit={noop} />);
+    // Group heading + per-card capability badges use the human name.
+    expect(screen.getAllByText(/Authorisation/).length).toBeGreaterThan(0);
+    expect(screen.queryByText(/foundation\.authorisation/)).not.toBeInTheDocument();
+  });
 });
 
 const combinedReview = {
@@ -102,6 +109,7 @@ const combinedReview = {
         id: 'FR-1',
         type: 'functional',
         text: 'The system should let users do the main task.',
+        sourceArchetypeName: 'Identity & Access',
         smart: { specific: false, measurable: false, achievable: true, relevant: true, testable: false },
         improvedSmart: { specific: true, measurable: true, achievable: true, relevant: true, testable: true },
         issues: ['Vague ("main task", "should")', 'Not measurable'],
@@ -135,6 +143,23 @@ describe('ReviewView combined requirement card', () => {
     // The original fails Specific (S✗); the rewrite passes it (S✓).
     expect(screen.getByText('S✗')).toBeInTheDocument();
     expect(screen.getByText('S✓')).toBeInTheDocument();
+  });
+
+  it('shows the catalogue capability on the compared requirement card', () => {
+    render(<ReviewView review={combinedReview} selection={{}} edits={{}} onSelect={noop} onEdit={noop} />);
+    expect(screen.getByText('🗂 Identity & Access')).toBeInTheDocument();
+  });
+
+  it('falls back to the AI category when a requirement has no catalogue match', () => {
+    const review = {
+      result: {
+        existingRequirements: [
+          { id: 'FR-1', type: 'functional', category: 'Public Pages', text: 'Relabel the Get Started savings option', improvedText: 'The page shall…' },
+        ],
+      },
+    };
+    render(<ReviewView review={review} selection={{}} edits={{}} onSelect={noop} onEdit={noop} />);
+    expect(screen.getByText('🗂 Public Pages')).toBeInTheDocument();
   });
 
   it('gives the author an accept-rewrite / keep-mine / edit gate', () => {
