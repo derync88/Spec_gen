@@ -112,7 +112,7 @@ export default function SpecEditor() {
     setBusy('analysing'); setError(''); setStatus('');
     try {
       await api.updateSpec(id, specFields());
-      const { analysis } = await api.ingestRepo(id);
+      const { analysis } = await api.ingestRepo(id, { token: repoToken || undefined });
       setRepoAnalysis(analysis);
       setStatus(`Analysed ${analysis.repo?.owner}/${analysis.repo?.repo} via ${analysis.provider}.`);
     } catch (err) {
@@ -437,7 +437,7 @@ export default function SpecEditor() {
             </div>
           ) : (
             <div className="field">
-              <label>GitHub repository <span className="muted">(public — we read the code &amp; what&apos;s already delivered)</span></label>
+              <label>GitHub repository <span className="muted">(public or private — we read the code &amp; what&apos;s already delivered)</span></label>
               <div className="row">
                 <input
                   style={{ flex: 1, minWidth: '220px' }}
@@ -449,6 +449,15 @@ export default function SpecEditor() {
                   {busy === 'analysing' ? 'Analysing…' : '🔍 Analyse repository'}
                 </button>
               </div>
+              <input
+                type="password"
+                autoComplete="off"
+                value={repoToken}
+                onChange={(e) => setRepoToken(e.target.value)}
+                placeholder="Access token — optional, required for a private repo (used once, never stored)"
+                style={{ marginTop: '0.5rem', width: '100%' }}
+                aria-label="GitHub access token"
+              />
               {repoAnalysis && (
                 <div className="card" style={{ marginTop: '0.7rem', background: 'var(--panel-2)' }}>
                   <strong>Already in the codebase</strong>
