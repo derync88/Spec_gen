@@ -6,6 +6,8 @@ import {
   buildRewriteUserPrompt,
   QUESTIONS_SYSTEM_PROMPT,
   buildQuestionsUserPrompt,
+  GENERATE_SYSTEM_PROMPT,
+  buildGenerateUserPrompt,
   CLASSIFY_SYSTEM_PROMPT,
   buildClassifyUserPrompt,
   INFER_DELIVERED_SYSTEM_PROMPT,
@@ -44,6 +46,23 @@ export async function review(spec) {
     messages: [
       { role: 'system', content: SYSTEM_PROMPT },
       { role: 'user', content: buildUserPrompt(spec) },
+    ],
+  });
+
+  const text = completion.choices[0]?.message?.content || '';
+  return { provider: 'openai', model: MODEL, text };
+}
+
+/** Author a full requirement set from the objective (generation flow). Returns { provider, model, text }. */
+export async function generate(spec) {
+  const client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+
+  const completion = await client.chat.completions.create({
+    model: MODEL,
+    response_format: { type: 'json_object' },
+    messages: [
+      { role: 'system', content: GENERATE_SYSTEM_PROMPT },
+      { role: 'user', content: buildGenerateUserPrompt(spec) },
     ],
   });
 

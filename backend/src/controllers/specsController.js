@@ -12,14 +12,14 @@ export async function list(req, res, next) {
 
 export async function create(req, res, next) {
   try {
-    let { title, content, context, projectType, objective, repoUrl } = req.body;
+    let { title, content, context, mode, projectType, objective, repoUrl } = req.body;
     // File upload (multer) takes precedence for content.
     if (req.file) {
       content = req.file.buffer.toString('utf8');
       if (!title) title = req.file.originalname.replace(/\.[^.]+$/, '');
     }
     const spec = await specService.createSpec(req.userId, {
-      title, content, context, projectType, objective, repoUrl,
+      title, content, context, mode, projectType, objective, repoUrl,
     });
     res.status(201).json({ spec });
   } catch (err) {
@@ -37,10 +37,10 @@ export async function get(req, res, next) {
 
 export async function update(req, res, next) {
   try {
-    let { title, content, context, projectType, objective, repoUrl } = req.body;
+    let { title, content, context, mode, projectType, objective, repoUrl } = req.body;
     if (req.file) content = req.file.buffer.toString('utf8');
     const spec = await specService.updateSpec(req.userId, req.params.id, {
-      title, content, context, projectType, objective, repoUrl,
+      title, content, context, mode, projectType, objective, repoUrl,
     });
     res.json({ spec });
   } catch (err) {
@@ -51,7 +51,8 @@ export async function update(req, res, next) {
 /** Existing-project (FR): deep-read the spec's public GitHub repo as known-state. */
 export async function ingestRepo(req, res, next) {
   try {
-    const analysis = await specService.ingestRepo(req.userId, req.params.id);
+    const { token } = req.body || {};
+    const analysis = await specService.ingestRepo(req.userId, req.params.id, { token });
     res.json({ analysis });
   } catch (err) {
     next(err);
@@ -80,6 +81,17 @@ export async function review(req, res, next) {
   try {
     const { questions, answers } = req.body || {};
     const result = await specService.reviewSpec(req.userId, req.params.id, { questions, answers });
+    res.json({ review: result });
+  } catch (err) {
+    next(err);
+  }
+}
+
+/** Generation workflow: author a requirement set from the spec's objective. */
+export async function generate(req, res, next) {
+  try {
+    const { token } = req.body || {};
+    const result = await specService.generateSpec(req.userId, req.params.id, { token });
     res.json({ review: result });
   } catch (err) {
     next(err);

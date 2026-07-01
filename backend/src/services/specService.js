@@ -1,6 +1,6 @@
 import { query } from '../db/pool.js';
 import { httpError } from '../middleware/error.js';
-import { runReview, runRewrite, runQuestions, runInferDelivered } from './ai/index.js';
+import { runReview, runRewrite, runQuestions, runInferDelivered, runGenerate } from './ai/index.js';
 import { computeChangeSummary } from '../utils/diff.js';
 import { withDefinitionOfDone } from '../utils/definitionOfDone.js';
 import { reconcileRequirementIds, fingerprint } from './requirementIds.js';
@@ -9,7 +9,7 @@ import { fetchRepoSnapshot } from './githubService.js';
 
 // Columns common to every spec read, so create/get/update return the same shape.
 const SPEC_COLUMNS =
-  'id, title, content, context, project_type, objective, repo_url, repo_analysis, created_at, updated_at';
+  'id, title, content, context, mode, project_type, objective, repo_url, repo_analysis, created_at, updated_at';
 
 export async function listSpecs(userId) {
   const { rows } = await query(
@@ -24,14 +24,15 @@ export async function listSpecs(userId) {
   return rows;
 }
 
-export async function createSpec(userId, { title, content, context, projectType, objective, repoUrl }) {
+export async function createSpec(userId, { title, content, context, mode, projectType, objective, repoUrl }) {
   if (!title || !title.trim()) throw httpError(400, 'A title is required');
   const { rows } = await query(
-    `INSERT INTO specs (user_id, title, content, context, project_type, objective, repo_url)
-     VALUES ($1, $2, $3, $4, $5, $6, $7)
+    `INSERT INTO specs (user_id, title, content, context, mode, project_type, objective, repo_url)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
      RETURNING ${SPEC_COLUMNS}`,
     [
       userId, title.trim(), content || '', context || '',
+      mode === 'generate' ? 'generate' : 'review',
       projectType === 'existing' ? 'existing' : 'new', objective || '', repoUrl || '',
     ]
   );
@@ -64,21 +65,22 @@ export async function getSpec(userId, specId) {
   return spec;
 }
 
-export async function updateSpec(userId, specId, { title, content, context, projectType, objective, repoUrl }) {
+export async function updateSpec(userId, specId, { title, content, context, mode, projectType, objective, repoUrl }) {
   const { rows } = await query(
     `UPDATE specs
      SET title = COALESCE($3, title),
          content = COALESCE($4, content),
          context = COALESCE($5, context),
-         project_type = COALESCE($6, project_type),
-         objective = COALESCE($7, objective),
-         repo_url = COALESCE($8, repo_url),
+         mode = COALESCE($6, mode),
+         project_type = COALESCE($7, project_type),
+         objective = COALESCE($8, objective),
+         repo_url = COALESCE($9, repo_url),
          updated_at = now()
      WHERE id = $1 AND user_id = $2
      RETURNING ${SPEC_COLUMNS}`,
     [
       specId, userId, title?.trim() ?? null, content ?? null, context ?? null,
-      projectType ?? null, objective ?? null, repoUrl ?? null,
+      mode ?? null, projectType ?? null, objective ?? null, repoUrl ?? null,
     ]
   );
   if (!rows[0]) throw httpError(404, 'Spec not found');
@@ -187,19 +189,100 @@ export async function reviewSpec(userId, specId, { questions, answers } = {}) {
 }
 
 /**
+ * Generation workflow: the AI AUTHORS a full requirement set from the spec's
+ * title + objective (+ optional repo grounding), instead of reviewing a draft.
+ * The authored requirements land in result.suggestedRequirements (each with a
+ * SMART self-assessment) and flow through the SAME accept/build gate. Per the
+ * product decision they arrive PRE-ACCEPTED: we seed the review's `decisions`
+ * with every id accepted, so the state survives reload and Build immediately
+ * folds them in — removing an item before Build still excludes it (no silent
+ * injection).
+ *
+ * `token` (optional GitHub PAT) is used only to read a private repo for
+ * grounding; it is never persisted.
+ */
+export async function generateSpec(userId, specId, { token } = {}) {
+  const spec = await getSpec(userId, specId);
+  if (!spec.objective || !spec.objective.trim()) {
+    throw httpError(400, 'Describe what you want to achieve before generating.');
+  }
+
+  // For an existing project, read the repo first (using the optional token for
+  // private repos) so generation is grounded in what's already built and one
+  // click — already-delivered capabilities are not re-authored.
+  let delivered = deliveredFrom(spec);
+  if (spec.project_type === 'existing' && spec.repo_url && spec.repo_url.trim()) {
+    try {
+      const analysis = await ingestRepo(userId, specId, { token });
+      delivered = (analysis.deliveredRequirements || [])
+        .map((d) => (typeof d === 'string' ? d : d.text))
+        .filter(Boolean);
+    } catch {
+      // Non-fatal: generate without repo grounding if the fetch/analysis fails.
+    }
+  }
+
+  const { renderMarkdown } = await import('../utils/markdown.js');
+  const genData = await runGenerate({
+    title: spec.title,
+    objective: spec.objective,
+    context: spec.context,
+    delivered,
+  });
+
+  const result = genData.result || (genData.result = {});
+  if (!Array.isArray(result.suggestedRequirements)) result.suggestedRequirements = [];
+
+  // Capability fallback (catalogue name → AI category) + stable IDs/provenance,
+  // identical to the review path so the same cards render.
+  result.suggestedRequirements = attachCapabilities(result.suggestedRequirements);
+  await reconcileRequirementIds(specId, result);
+
+  const markdown = renderMarkdown({ title: spec.title, content: spec.content, review: genData });
+
+  // Pre-accept every generated requirement (durable, so Build/reload work).
+  const decisions = {
+    accepted: result.suggestedRequirements.map((r) => r.id).filter(Boolean),
+    rejected: [],
+    edits: {},
+    decidedAt: new Date().toISOString(),
+  };
+
+  const { rows } = await query(
+    `INSERT INTO reviews
+       (spec_id, provider, model, coverage_score, summary, result, markdown, decisions)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+     RETURNING id, provider, model, coverage_score, summary, result, markdown,
+               rewritten_markdown, questions, answers, decisions, created_at`,
+    [
+      specId,
+      genData.provider,
+      genData.model,
+      null,
+      result.summary ?? null,
+      JSON.stringify(result),
+      markdown,
+      JSON.stringify(decisions),
+    ]
+  );
+  return rows[0];
+}
+
+/**
  * Existing-project ingestion: deep-read the spec's public GitHub repo, derive the
  * tech stack + already-delivered requirements, and cache them on the spec. The
  * result is KNOWN-STATE only — it grounds the review (so built capabilities are
  * not re-suggested) and is shown read-only; it never becomes an accepted
  * requirement without going through the gate (NFR-C3 / no silent injection).
  */
-export async function ingestRepo(userId, specId) {
+export async function ingestRepo(userId, specId, { token } = {}) {
   const spec = await getSpec(userId, specId);
   if (!spec.repo_url || !spec.repo_url.trim()) {
-    throw httpError(400, 'Add a public GitHub repository URL before analysing.');
+    throw httpError(400, 'Add a GitHub repository URL before analysing.');
   }
 
-  const snapshot = await fetchRepoSnapshot(spec.repo_url);
+  // `token` (optional GitHub PAT) is used only for this fetch — never persisted.
+  const snapshot = await fetchRepoSnapshot(spec.repo_url, { token });
   const inferred = await runInferDelivered(
     { title: spec.title, content: spec.content, context: spec.context, objective: spec.objective },
     snapshot

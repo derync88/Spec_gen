@@ -20,6 +20,7 @@ router.put('/:id', upload.single('file'), specsController.update);
 router.delete('/:id', specsController.remove);
 router.post('/:id/questions', specsController.questions);
 router.post('/:id/review', specsController.review);
+router.post('/:id/generate', specsController.generate);
 router.post('/:id/rewrite', specsController.rewrite);
 router.post('/:id/classify', specsController.classify);
 router.post('/:id/ingest-repo', specsController.ingestRepo);

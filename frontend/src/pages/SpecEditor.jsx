@@ -16,10 +16,14 @@ export default function SpecEditor() {
   const [content, setContent] = useState('');
   const [context, setContext] = useState('');
 
+  // Workflow: 'review' (assess a draft) or 'generate' (author from an objective).
+  const [mode, setMode] = useState('review');
+
   // Project setup: new project (objective) vs existing project (GitHub repo).
   const [projectType, setProjectType] = useState('new');
   const [objective, setObjective] = useState('');
   const [repoUrl, setRepoUrl] = useState('');
+  const [repoToken, setRepoToken] = useState(''); // optional GitHub PAT (private repos); never persisted
   const [repoAnalysis, setRepoAnalysis] = useState(null);
 
   const [questions, setQuestions] = useState([]);
@@ -48,6 +52,7 @@ export default function SpecEditor() {
         setTitle(spec.title);
         setContent(spec.content);
         setContext(spec.context || '');
+        setMode(spec.mode || 'review');
         setProjectType(spec.project_type || 'new');
         setObjective(spec.objective || '');
         setRepoUrl(spec.repo_url || '');
@@ -90,7 +95,7 @@ export default function SpecEditor() {
     (e) => e.improvedText && selection[e.id] === 'accepted'
   ).length;
 
-  const specFields = () => ({ title, content, context, projectType, objective, repoUrl });
+  const specFields = () => ({ title, content, context, mode, projectType, objective, repoUrl });
 
   const save = async () => {
     setSaving(true); setError(''); setStatus('');
@@ -110,6 +115,27 @@ export default function SpecEditor() {
       const { analysis } = await api.ingestRepo(id);
       setRepoAnalysis(analysis);
       setStatus(`Analysed ${analysis.repo?.owner}/${analysis.repo?.repo} via ${analysis.provider}.`);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setBusy('');
+    }
+  };
+
+  // Generation workflow: author the requirement set from the objective. The
+  // result arrives pre-accepted (decisions seeded server-side) so it's ready to
+  // refine and Build.
+  const generate = async () => {
+    if (!objective.trim()) { setError('Describe what you want to achieve first.'); return; }
+    setBusy('generating'); setError(''); setStatus('');
+    try {
+      await api.updateSpec(id, specFields());
+      const { review } = await api.generateSpec(id, { token: repoToken || undefined });
+      setReview(review);
+      setRewrittenMd(review.rewritten_markdown || '');
+      restoreDecisions(review);
+      setTab('review');
+      refreshSidebar();
     } catch (err) {
       setError(err.message);
     } finally {
@@ -260,7 +286,12 @@ export default function SpecEditor() {
         <Link to="/">← All specs</Link>
         <div className="spacer" />
         <button onClick={save} disabled={saving}>{saving ? 'Saving…' : 'Save'}</button>
-        {tab === 'edit' && (
+        {tab === 'edit' && mode === 'generate' && (
+          <button className="primary" onClick={generate} disabled={!!busy}>
+            {busy === 'generating' ? 'Generating…' : '✨ Generate spec'}
+          </button>
+        )}
+        {tab === 'edit' && mode !== 'generate' && (
           <button className="primary" onClick={startReview} disabled={!!busy}>
             {reviewing ? 'Working…' : '✨ Run AI review'}
           </button>
@@ -271,7 +302,7 @@ export default function SpecEditor() {
       {status && <p className="muted">{status}</p>}
 
       <div className="tabs">
-        <button className={tab === 'edit' ? 'active' : ''} onClick={() => setTab('edit')}>Draft</button>
+        <button className={tab === 'edit' ? 'active' : ''} onClick={() => setTab('edit')}>{mode === 'generate' ? 'Generate' : 'Draft'}</button>
         <button className={tab === 'classify' ? 'active' : ''} onClick={() => setTab('classify')}>Catalogue</button>
         {questions.length > 0 && !review && (
           <button className={tab === 'questions' ? 'active' : ''} onClick={() => setTab('questions')}>Questions</button>
@@ -287,8 +318,84 @@ export default function SpecEditor() {
         </button>
       </div>
 
-      {/* ---------------- Draft ---------------- */}
-      {tab === 'edit' && (
+      {/* ---------------- Generate (objective → authored requirements) ---------------- */}
+      {tab === 'edit' && mode === 'generate' && (
+        <div className="card">
+          <div className="field">
+            <label>Title</label>
+            <input value={title} onChange={(e) => setTitle(e.target.value)} />
+          </div>
+
+          <div className="field">
+            <label>Project</label>
+            <div className="seg" role="group" aria-label="Project type">
+              <button
+                type="button"
+                className={projectType === 'new' ? 'active' : ''}
+                aria-pressed={projectType === 'new'}
+                onClick={() => setProjectType('new')}
+              >
+                New project
+              </button>
+              <button
+                type="button"
+                className={projectType === 'existing' ? 'active' : ''}
+                aria-pressed={projectType === 'existing'}
+                onClick={() => setProjectType('existing')}
+              >
+                Enhancing an existing one
+              </button>
+            </div>
+          </div>
+
+          {projectType === 'existing' && (
+            <>
+              <div className="field">
+                <label>GitHub repository <span className="muted">(public or private)</span></label>
+                <input
+                  value={repoUrl}
+                  onChange={(e) => setRepoUrl(e.target.value)}
+                  placeholder="https://github.com/owner/repo"
+                />
+              </div>
+              <div className="field">
+                <label>Access token <span className="muted">(optional — required for a private repo; used once, never stored)</span></label>
+                <input
+                  type="password"
+                  autoComplete="off"
+                  value={repoToken}
+                  onChange={(e) => setRepoToken(e.target.value)}
+                  placeholder="ghp_… (leave blank for a public repo)"
+                />
+              </div>
+            </>
+          )}
+
+          <div className="field">
+            <label>What do you want to achieve?</label>
+            <textarea
+              style={{ minHeight: 120 }}
+              value={objective}
+              onChange={(e) => setObjective(e.target.value)}
+              placeholder="Describe the outcome this platform should deliver for its users — the more specific, the sharper the generated requirements."
+            />
+          </div>
+
+          <div className="row">
+            <button className="primary" onClick={generate} disabled={!!busy}>
+              {busy === 'generating' ? 'Generating…' : '✨ Generate spec'}
+            </button>
+            <span className="muted" style={{ fontSize: '0.85rem' }}>
+              We&apos;ll author functional &amp; non-functional requirements across the ISO/IEC 25010 quality
+              characteristics — each with a SMART assessment, a category, and the standard that produced it.
+              They arrive accepted; remove or edit any before you build.
+            </span>
+          </div>
+        </div>
+      )}
+
+      {/* ---------------- Draft (review workflow) ---------------- */}
+      {tab === 'edit' && mode !== 'generate' && (
         <div className="card">
           <div className="field">
             <label>Title</label>
@@ -435,15 +542,29 @@ export default function SpecEditor() {
         <>
           <div className="card action-bar">
             <div>
-              <strong>
-                {improvementsAcceptedCount} rewrite{improvementsAcceptedCount === 1 ? '' : 's'} adopted ·{' '}
-                {acceptedCount} new requirement{acceptedCount === 1 ? '' : 's'} added
-              </strong>
-              <div className="muted" style={{ fontSize: '0.85rem' }}>
-                {acceptedCount === 0 && improvementsAcceptedCount === 0
-                  ? 'Your original wording is kept. Accept a rewrite or a new requirement to fold it in — nothing changes your spec until you do.'
-                  : 'Your spec keeps your original wording except where you accepted a rewrite, plus the new requirements you accepted.'}
-              </div>
+              {mode === 'generate' ? (
+                <>
+                  <strong>
+                    {acceptedCount} of {suggestions.length} generated requirement{suggestions.length === 1 ? '' : 's'} accepted
+                  </strong>
+                  <div className="muted" style={{ fontSize: '0.85rem' }}>
+                    These were authored for you and start accepted. Reject or edit any you don&apos;t want, then build —
+                    only accepted requirements enter the spec.
+                  </div>
+                </>
+              ) : (
+                <>
+                  <strong>
+                    {improvementsAcceptedCount} rewrite{improvementsAcceptedCount === 1 ? '' : 's'} adopted ·{' '}
+                    {acceptedCount} new requirement{acceptedCount === 1 ? '' : 's'} added
+                  </strong>
+                  <div className="muted" style={{ fontSize: '0.85rem' }}>
+                    {acceptedCount === 0 && improvementsAcceptedCount === 0
+                      ? 'Your original wording is kept. Accept a rewrite or a new requirement to fold it in — nothing changes your spec until you do.'
+                      : 'Your spec keeps your original wording except where you accepted a rewrite, plus the new requirements you accepted.'}
+                  </div>
+                </>
+              )}
             </div>
             <div className="spacer" />
             <Link to={`/specs/${id}/coverage`} target="_blank" rel="noopener" className="report-link">

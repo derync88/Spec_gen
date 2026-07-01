@@ -6,6 +6,8 @@ import {
   buildRewriteUserPrompt,
   QUESTIONS_SYSTEM_PROMPT,
   buildQuestionsUserPrompt,
+  GENERATE_SYSTEM_PROMPT,
+  buildGenerateUserPrompt,
   CLASSIFY_SYSTEM_PROMPT,
   buildClassifyUserPrompt,
   INFER_DELIVERED_SYSTEM_PROMPT,
@@ -51,6 +53,26 @@ export async function review(spec) {
   });
 
   // Concatenate text blocks (thinking blocks are skipped).
+  const text = message.content
+    .filter((b) => b.type === 'text')
+    .map((b) => b.text)
+    .join('');
+
+  return { provider: 'claude', model: MODEL, text };
+}
+
+/** Author a full requirement set from the objective (generation flow). Returns { provider, model, text }. */
+export async function generate(spec) {
+  const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+
+  const message = await client.messages.create({
+    model: MODEL,
+    max_tokens: 16000,
+    thinking: { type: 'adaptive' },
+    system: GENERATE_SYSTEM_PROMPT,
+    messages: [{ role: 'user', content: buildGenerateUserPrompt(spec) }],
+  });
+
   const text = message.content
     .filter((b) => b.type === 'text')
     .map((b) => b.text)

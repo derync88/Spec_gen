@@ -74,6 +74,20 @@ export async function runReview(spec) {
 }
 
 /**
+ * Author a full requirement set for a spec from its title + objective (+ optional
+ * already-delivered context) — the generation workflow. `spec` may carry
+ * { title, objective, context, delivered }. Returns { provider, model, result }
+ * where result.suggestedRequirements are the authored requirements.
+ */
+export async function runGenerate(spec) {
+  const provider = pickProvider();
+  const { provider: name, model, text } = await provider.generate(spec);
+  const result = parseJson(text);
+  if (!Array.isArray(result.suggestedRequirements)) result.suggestedRequirements = [];
+  return { provider: name, model, result };
+}
+
+/**
  * Classify free-text requirements against candidate archetypes (FR-CL).
  * Returns { provider, model, classifications }.
  */

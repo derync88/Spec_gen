@@ -152,3 +152,9 @@ ALTER TABLE specs ADD COLUMN IF NOT EXISTS repo_url     TEXT NOT NULL DEFAULT ''
 -- to the review as KNOWN-STATE so built capabilities are not re-suggested — it is
 -- never auto-merged into the spec (NFR-C3 / the gate still owns every addition).
 ALTER TABLE specs ADD COLUMN IF NOT EXISTS repo_analysis JSONB;
+
+-- Workflow this spec uses: 'review' (author writes a draft, AI assesses it) or
+-- 'generate' (author states an objective, AI authors the requirement set). Drives
+-- which entry view the editor opens. No token is ever stored — a GitHub PAT for a
+-- private repo is passed per-request and used only for that fetch.
+ALTER TABLE specs ADD COLUMN IF NOT EXISTS mode TEXT NOT NULL DEFAULT 'review';   -- 'review' | 'generate'

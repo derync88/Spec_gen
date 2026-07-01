@@ -53,6 +53,7 @@ export const api = {
   deleteSpec: (id) => request(`/specs/${id}`, { method: 'DELETE' }),
   getQuestions: (id) => request(`/specs/${id}/questions`, { method: 'POST' }),
   reviewSpec: (id, b) => request(`/specs/${id}/review`, { method: 'POST', body: b }),
+  generateSpec: (id, b) => request(`/specs/${id}/generate`, { method: 'POST', body: b }),
   rewriteSpec: (id, b) => request(`/specs/${id}/rewrite`, { method: 'POST', body: b }),
   listVersions: (id) => request(`/specs/${id}/versions`),
   getVersion: (id, vid) => request(`/specs/${id}/versions/${vid}`),
@@ -64,7 +65,7 @@ export const api = {
   // Live, zero-LLM keyword lookup used by the draft editor as the user types.
   matchCatalogue: (b) => request('/catalogue/match', { method: 'POST', body: b }),
   // Existing-project deep-read: derive stack + already-delivered requirements.
-  ingestRepo: (id) => request(`/specs/${id}/ingest-repo`, { method: 'POST' }),
+  ingestRepo: (id, b) => request(`/specs/${id}/ingest-repo`, { method: 'POST', body: b }),
   classifySpec: (id, b) => request(`/specs/${id}/classify`, { method: 'POST', body: b }),
   getSpecArchetypes: (id) => request(`/specs/${id}/archetypes`),
   decideArchetype: (id, archetypeId, status) =>

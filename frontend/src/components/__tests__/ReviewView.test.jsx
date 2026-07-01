@@ -184,6 +184,34 @@ describe('ReviewView combined requirement card', () => {
   });
 });
 
+describe('ReviewView generated requirements', () => {
+  const generated = {
+    result: {
+      suggestedRequirements: [
+        {
+          id: 'FR-1', source: 'model-suggested', type: 'functional', category: 'Authentication',
+          text: 'The system shall authenticate a user by email and password.',
+          smart: { specific: true, measurable: true, achievable: true, relevant: true, testable: true },
+          standardRef: 'ISO 29148', verification: 'test', priority: 'must',
+        },
+      ],
+    },
+  };
+
+  it('renders a SMART row, the capability and the BA standard on a generated card', () => {
+    render(<ReviewView review={generated} selection={{}} edits={{}} onSelect={noop} onEdit={noop} />);
+    expect(screen.getByLabelText('SMART rating of this requirement')).toBeInTheDocument();
+    expect(screen.getByText('🗂 Authentication')).toBeInTheDocument();
+    expect(screen.getByText('📐 ISO 29148')).toBeInTheDocument();
+    expect(screen.getByText(/shall authenticate a user/)).toBeInTheDocument();
+  });
+
+  it('reflects the pre-accepted state from the selection', () => {
+    render(<ReviewView review={generated} selection={{ 'FR-1': 'accepted' }} edits={{}} onSelect={noop} onEdit={noop} />);
+    expect(screen.getByRole('button', { name: '✓ Accepted' })).toHaveAttribute('aria-pressed', 'true');
+  });
+});
+
 describe('ReviewView no longer shows the coverage report sections', () => {
   it('omits coverage score, how-to-reach-100, category table, gaps, ambiguities and traceability', () => {
     render(

@@ -249,6 +249,18 @@ th { color: var(--muted); font-weight: 600; }
 .suggestion.is-accepted { border-color: #2a5c33; box-shadow: inset 3px 0 0 var(--good); }
 .suggestion.is-rejected { opacity: 0.55; border-style: dashed; }
 
+/* Dashboard two-workflow choice cards. */
+.choice-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-top: 0.8rem; }
+.choice-card {
+  display: flex; flex-direction: column; align-items: flex-start; gap: 0.5rem;
+  border: 1px solid var(--border); border-radius: 10px; padding: 1rem; background: var(--panel);
+}
+.choice-card .choice-icon { font-size: 1.5rem; }
+.choice-card p { margin: 0; flex: 1; }
+.choice-card button { margin-top: 0.3rem; }
+.choice-card .upload-link { font-size: 0.82rem; color: var(--accent); cursor: pointer; margin-top: 0.2rem; }
+@media (max-width: 720px) { .choice-grid { grid-template-columns: 1fr; } }
+
 /* Link to the standalone full coverage report (top-right of the review). */
 .report-link { align-self: center; white-space: nowrap; font-weight: 600; }
 .report .container, .container.report { max-width: 920px; }

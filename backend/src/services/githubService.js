@@ -44,12 +44,22 @@ export function parseRepoUrl(url) {
   return { owner: m[1], repo: m[2].replace(/\.git$/, '') };
 }
 
-async function ghJson(path) {
+/** Auth header for a GitHub Personal Access Token, when one is supplied. */
+function authHeaders(token) {
+  return token ? { Authorization: `Bearer ${token}` } : {};
+}
+
+async function ghJson(path, token) {
   const res = await fetch(`${API}${path}`, {
-    headers: { 'User-Agent': UA, Accept: 'application/vnd.github+json' },
+    headers: { 'User-Agent': UA, Accept: 'application/vnd.github+json', ...authHeaders(token) },
   });
-  if (res.status === 404) throw httpError(400, 'Repository not found — is the URL correct and the repo public?');
-  if (res.status === 403) throw httpError(429, 'GitHub rate limit reached (unauthenticated). Try again shortly.');
+  if (res.status === 404) {
+    throw httpError(400, token
+      ? 'Repository not found — check the URL, and that the token can access this repo.'
+      : 'Repository not found — is the URL correct? Private repos need a token.');
+  }
+  if (res.status === 401) throw httpError(400, 'GitHub rejected the token (401). Check the Personal Access Token.');
+  if (res.status === 403) throw httpError(429, `GitHub rate limit reached${token ? '' : ' (unauthenticated)'}. Try again shortly.`);
   if (!res.ok) throw httpError(502, `GitHub request failed (${res.status}).`);
   return res.json();
 }
@@ -66,14 +76,14 @@ function rank(path) {
  * Fetch a bounded snapshot of a public repo.
  * Returns { repo, stack, fileTree, files: [{ path, content }], truncated }.
  */
-export async function fetchRepoSnapshot(url, { fetchImpl = fetch } = {}) {
+export async function fetchRepoSnapshot(url, { fetchImpl = fetch, token } = {}) {
   const { owner, repo } = parseRepoUrl(url);
 
-  const meta = await ghJson(`/repos/${owner}/${repo}`);
+  const meta = await ghJson(`/repos/${owner}/${repo}`, token);
   const branch = meta.default_branch || 'main';
   const [languages, tree] = await Promise.all([
-    ghJson(`/repos/${owner}/${repo}/languages`),
-    ghJson(`/repos/${owner}/${repo}/git/trees/${branch}?recursive=1`),
+    ghJson(`/repos/${owner}/${repo}/languages`, token),
+    ghJson(`/repos/${owner}/${repo}/git/trees/${branch}?recursive=1`, token),
   ]);
 
   const stack = Object.keys(languages || {});
@@ -95,8 +105,17 @@ export async function fetchRepoSnapshot(url, { fetchImpl = fetch } = {}) {
   for (const n of candidates) {
     if (files.length >= MAX_FILES || totalBytes >= MAX_TOTAL_BYTES) { filesDropped += 1; continue; }
     try {
-      const res = await fetchImpl(`${RAW}/${owner}/${repo}/${branch}/${encodeURI(n.path)}`, {
-        headers: { 'User-Agent': UA },
+      // With a token, fetch via the contents API (works for PRIVATE repos);
+      // raw.githubusercontent.com only serves public files. Without a token,
+      // use the raw host as before.
+      const fileUrl = token
+        ? `${API}/repos/${owner}/${repo}/contents/${n.path.split('/').map(encodeURIComponent).join('/')}?ref=${branch}`
+        : `${RAW}/${owner}/${repo}/${branch}/${encodeURI(n.path)}`;
+      const res = await fetchImpl(fileUrl, {
+        headers: {
+          'User-Agent': UA,
+          ...(token ? { Authorization: `Bearer ${token}`, Accept: 'application/vnd.github.raw' } : {}),
+        },
       });
       if (!res.ok) { filesDropped += 1; continue; }
       const content = await res.text();

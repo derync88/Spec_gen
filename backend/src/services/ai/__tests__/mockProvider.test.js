@@ -50,3 +50,20 @@ test('rewrite stays flat (no capability sub-headings) when nothing has a catalog
   const { markdown } = await mock.rewrite({ title: 'Demo', context: '' }, accepted);
   assert.doesNotMatch(markdown, /#### /);
 });
+
+test('mock generate authors shall-statements with SMART + category + standard', async () => {
+  const { text } = await mock.generate({ title: 'Demo', objective: 'Let users manage records' });
+  const result = JSON.parse(text);
+  const reqs = result.suggestedRequirements;
+  assert.ok(Array.isArray(reqs) && reqs.length >= 4);
+  // Every generated requirement carries the annotations the generate flow needs.
+  for (const r of reqs) {
+    assert.match(r.text, /shall/i);
+    assert.ok(r.smart && typeof r.smart.specific === 'boolean');
+    assert.ok(r.category && r.standardRef);
+    assert.ok(['functional', 'non-functional'].includes(r.type));
+  }
+  // Covers both functional and non-functional.
+  assert.ok(reqs.some((r) => r.type === 'functional'));
+  assert.ok(reqs.some((r) => r.type === 'non-functional'));
+});

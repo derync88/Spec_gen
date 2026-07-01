@@ -41,13 +41,16 @@ function SuggestionCard({ req, status, editText, onSelect, onEdit }) {
         <span className="req-id">{req.id}</span>
       </div>
 
+      {/* SMART self-assessment (present on generated requirements). */}
+      <SmartRow smart={req.smart} label="this requirement" />
+
       <p className="req-text">
         {editText ?? req.text}
         {editText && <span className="badge edited">edited</span>}
       </p>
 
       <div className="meta">
-        {req.standardRef && <span>{req.standardRef}</span>}
+        {req.standardRef && <span title="business-analysis standard / quality characteristic">📐 {req.standardRef}</span>}
         {req.verification && <span>{req.standardRef ? ' · ' : ''}✔ {req.verification}</span>}
         {req.istqbTechnique && <span> · 🧪 {req.istqbTechnique}</span>}
       </div>

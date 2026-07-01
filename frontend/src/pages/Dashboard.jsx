@@ -17,13 +17,12 @@ export default function Dashboard() {
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
 
-  const createBlank = async (e) => {
-    e.preventDefault();
-    if (!title.trim()) return;
+  const create = async (mode) => {
+    if (!title.trim()) { setError('Give your spec a title first.'); return; }
     setBusy(true);
     setError('');
     try {
-      const { spec } = await api.createSpec({ title, content: '' });
+      const { spec } = await api.createSpec({ title, content: '', mode });
       await refresh();
       navigate(`/specs/${spec.id}`);
     } catch (err) {
@@ -51,28 +50,51 @@ export default function Dashboard() {
     }
   };
 
+  const submitTitle = (e) => { e.preventDefault(); };
+
   return (
     <div className="container">
       <div className="card">
         <h2 style={{ marginTop: 0 }}>New specification</h2>
-        <form onSubmit={createBlank} className="row">
+        <form onSubmit={submitTitle} className="field">
+          <label>Title</label>
           <input
-            placeholder="Spec title, e.g. “Invoice export feature”"
+            placeholder="e.g. “Invoice export feature”"
             value={title}
             onChange={(e) => setTitle(e.target.value)}
-            style={{ flex: 1, minWidth: '220px' }}
+            aria-label="Spec title"
           />
-          <button className="primary" type="submit" disabled={busy}>Create blank</button>
-          <label className="badge" style={{ cursor: 'pointer', padding: '0.5rem 0.9rem', fontSize: '0.9rem' }}>
-            Upload .md / .txt
-            <input type="file" accept=".md,.txt,.markdown,text/plain" hidden onChange={uploadFile} />
-          </label>
         </form>
         {error && <p className="error">{error}</p>}
-        <p className="muted" style={{ marginBottom: 0 }}>
-          Write or paste draft requirements, then run an AI review for full functional &amp; non-functional coverage.
-          Your saved specs are always in the sidebar on the left.
-        </p>
+
+        <div className="choice-grid">
+          <div className="choice-card">
+            <div className="choice-icon" aria-hidden="true">✨</div>
+            <strong>Generate from an idea</strong>
+            <p className="muted">
+              Describe what you want to achieve and let the AI <em>author</em> the full functional &amp;
+              non-functional requirements — each rated against SMART, categorised, and tied to the
+              business-analysis standard that produced it.
+            </p>
+            <button className="primary" disabled={busy} onClick={() => create('generate')}>
+              ✨ Generate from an idea →
+            </button>
+          </div>
+
+          <div className="choice-card">
+            <div className="choice-icon" aria-hidden="true">📝</div>
+            <strong>Review my draft</strong>
+            <p className="muted">
+              Write or paste your own draft requirements and run an AI review for coverage, a SMART
+              assessment, and suggested improvements you accept or reject.
+            </p>
+            <button disabled={busy} onClick={() => create('review')}>📝 Review my draft →</button>
+            <label className="upload-link">
+              or upload a .md / .txt draft
+              <input type="file" accept=".md,.txt,.markdown,text/plain" hidden onChange={uploadFile} />
+            </label>
+          </div>
+        </div>
       </div>
 
       {specs.length > 0 && (

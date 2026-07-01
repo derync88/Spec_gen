@@ -167,6 +167,65 @@ export async function review(spec) {
   return { provider: 'mock', model: 'mock-reviewer', text: JSON.stringify(result) };
 }
 
+/**
+ * Mock generate — authors a small, schema-valid requirement set from the title +
+ * objective so the generation workflow runs end-to-end with no API key. Every
+ * item carries a SMART self-assessment, a category, and the BA standard.
+ */
+export async function generate(spec) {
+  const title = spec.title || 'the platform';
+  const all = [true, true, true, true, true];
+  const smart = (specific, measurable, achievable, relevant, testable) => ({ specific, measurable, achievable, relevant, testable });
+  const result = {
+    summary: `Mock generation for "${title}". Sample requirements authored across ISO 25010 characteristics because no AI provider key is configured. Set ANTHROPIC_API_KEY or OPENAI_API_KEY in backend/.env for a real, tailored generation.`,
+    suggestedRequirements: [
+      {
+        type: 'functional', category: 'Authentication',
+        text: 'The system shall authenticate a user by email and password, establishing a session on success and rejecting invalid credentials with a generic error.',
+        smart: smart(...all), standardRef: 'ISO 29148', verification: 'test', priority: 'must',
+        acceptanceCriteria: ['Given valid credentials, when submitted, then a session is created and the user reaches their home view.', 'Given invalid credentials, when submitted, then access is denied with no indication of which field was wrong.'],
+        rationale: 'A platform with user-specific data needs a verifiable sign-in path.', prescription: 'advisory',
+      },
+      {
+        type: 'functional', category: 'Core Workflow',
+        text: 'The system shall let an authenticated user create, view, edit, and delete their primary records, each operation confirmed in the UI.',
+        smart: smart(...all), standardRef: 'BABOK', verification: 'demonstration', priority: 'must',
+        acceptanceCriteria: ['Given an authenticated user, when they create a record with valid fields, then it is persisted and visible in their list.'],
+        rationale: 'The objective implies users manage their own data end to end.', prescription: 'advisory',
+      },
+      {
+        type: 'functional', category: 'Input Validation',
+        text: 'The system shall reject out-of-range or malformed field values at the boundary and return a field-level error identifying the field and the accepted range.',
+        smart: smart(true, true, true, true, true), standardRef: 'ISTQB - Boundary value analysis', verification: 'test', priority: 'should',
+        acceptanceCriteria: ['Given a bounded field [min,max], when min−1 or max+1 is submitted, then the request is rejected with a field-level error.'],
+        rationale: 'Boundary defects are a common, testable failure source.', prescription: 'advisory',
+      },
+      {
+        type: 'non-functional', category: 'Security',
+        text: 'The system shall require authentication for all non-public endpoints and reject unauthenticated requests with HTTP 401.',
+        smart: smart(...all), standardRef: 'ISO 25010 - Security', verification: 'test', priority: 'must',
+        acceptanceCriteria: ['Given no valid session, when a protected endpoint is called, then the response status is 401 and no resource data is returned.'],
+        rationale: 'Baseline access control for user-specific data.', prescription: 'constraint',
+      },
+      {
+        type: 'non-functional', category: 'Performance Efficiency',
+        text: 'The system shall return the primary read operation within a defined latency budget under expected load.',
+        smart: smart(true, false, true, true, true), standardRef: 'ISO 25010 - Performance Efficiency', verification: 'analysis', priority: 'could',
+        acceptanceCriteria: ['Given expected load of VALUE NEEDED requests/sec, when the primary read is called, then p95 latency is ≤ VALUE NEEDED ms.'],
+        rationale: 'A measurable performance target prevents "fast" being unverifiable.', prescription: 'advisory',
+      },
+      {
+        type: 'non-functional', category: 'Accessibility',
+        text: 'The system shall meet WCAG 2.2 AA for all primary user journeys, including keyboard operability and sufficient colour contrast.',
+        smart: smart(...all), standardRef: 'ISO 25010 - Usability', verification: 'inspection', priority: 'should',
+        acceptanceCriteria: ['Given any primary journey, when audited against WCAG 2.2 AA, then no Level A or AA failures remain.'],
+        rationale: 'Accessibility is a baseline quality obligation.', prescription: 'advisory',
+      },
+    ],
+  };
+  return { provider: 'mock', model: 'mock-reviewer', text: JSON.stringify(result) };
+}
+
 const CORE_CAPABILITY = 'Core requirements';
 
 /** Group requirements by their catalogue capability (human name), Core last. */

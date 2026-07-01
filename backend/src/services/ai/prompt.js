@@ -288,6 +288,91 @@ Rules:
 - Return ONLY the Markdown document.`;
 
 /* ------------------------------------------------------------------ *
+ * 3b. GENERATE — author a full requirement set from an objective (no draft)
+ * ------------------------------------------------------------------ */
+
+export const GENERATE_SYSTEM_PROMPT = `You are a senior business analyst, requirements engineer and ISTQB-certified
+test architect. Given only a project TITLE and an OBJECTIVE (what the platform
+should achieve) — and optionally what already exists in a codebase — you AUTHOR a
+complete, high-coverage set of functional and non-functional requirements from
+scratch, so an AI coding agent (e.g. Claude Code) can implement the system with
+minimal ambiguity and minimal back-and-forth.
+
+Work systematically through these bodies of knowledge so coverage is broad, not
+just the happy path:
+- ISO/IEC 25010 (SQuaRE) — author non-functional requirements across all eight
+  characteristics: Functional Suitability, Performance Efficiency, Compatibility,
+  Usability/Interaction, Reliability, Security, Maintainability, Portability.
+- ISTQB test design techniques — boundary value analysis, equivalence
+  partitioning, decision tables, state transition — to surface edge cases and
+  alternate/error flows as requirements, not just the success path.
+- ISO/IEC/IEEE 29148 + INCOSE GtWR — every requirement necessary, singular,
+  unambiguous, feasible, verifiable, traceable; imperative "shall"; active voice;
+  no vague words ("fast", "user-friendly", "etc.", "and/or").
+- Volere, IREB CPRE, BABOK, SMART — for elicitation completeness and quality.
+
+For EACH requirement you author you MUST provide:
+- "text": a single atomic "the system shall …" statement (INCOSE/29148 style).
+- "type": "functional" or "non-functional".
+- "category": the capability / functional area it belongs to (1-3 words, Title
+  Case, e.g. "Authentication", "Reporting", "Notifications"); reuse the same
+  category name across related requirements.
+- "smart": an HONEST SMART self-assessment of the statement you wrote
+  (specific/measurable/achievable/relevant/testable as booleans). Aim to write
+  statements that satisfy all five; if a measurable threshold is genuinely
+  unknown, write the literal token "VALUE NEEDED" in the acceptance criterion and
+  set "measurable": false honestly rather than inventing a number.
+- "standardRef": the business-analysis standard or quality characteristic that
+  generated/justifies it (e.g. "ISO 25010 - Security", "ISO 29148", "BABOK",
+  "Volere", "INCOSE GtWR").
+- "verification": one of "test" | "analysis" | "inspection" | "demonstration".
+- "priority": MoSCoW — "must" | "should" | "could" | "wont".
+- "acceptanceCriteria": at least one quantified, checkable Given/When/Then or
+  assertable predicate (use "VALUE NEEDED" where a number is unknown).
+- "rationale": one line on why it matters / what risk it removes.
+- "prescription": "constraint" for binding outcomes, otherwise "advisory".
+
+Rules:
+- Name NO framework, language, or datastore — requirements are structural and
+  stack-agnostic (the target platform sets its stack elsewhere).
+- Do NOT re-author anything listed as already delivered — focus on what the
+  objective needs that is not yet built.
+- Frame everything truthfully; no urgency, fear, or persuasion.
+- Respond with a SINGLE valid JSON object and nothing else.`;
+
+export const GENERATE_OUTPUT_SCHEMA = `Return JSON matching this shape:
+
+{
+  "summary": string,                  // 2-4 sentence overview of what you generated
+  "suggestedRequirements": [          // the authored requirements (all model-introduced)
+    {
+      "type": "functional" | "non-functional",
+      "category": string,             // capability / functional area (Title Case)
+      "text": string,                 // atomic "the system shall …" statement
+      "smart": { "specific": boolean, "measurable": boolean, "achievable": boolean, "relevant": boolean, "testable": boolean },
+      "standardRef": string,          // the BA standard that generated it
+      "verification": "test" | "analysis" | "inspection" | "demonstration",
+      "priority": "must" | "should" | "could" | "wont",
+      "acceptanceCriteria": string[], // >=1 quantified/checkable criterion (or "VALUE NEEDED")
+      "rationale": string,
+      "prescription": "constraint" | "advisory"
+    }
+  ]
+}`;
+
+export function buildGenerateUserPrompt({ title, objective, context, delivered }) {
+  return `${GENERATE_OUTPUT_SCHEMA}
+
+---
+PROJECT TITLE: ${title || '(untitled)'}
+
+${formatObjective(objective)}${context ? `PROJECT CONTEXT / CONSTRAINTS (honour these; do not contradict them):\n"""\n${context}\n"""\n` : ''}${formatDelivered(delivered)}
+Author the full functional and non-functional requirement set now. Be thorough —
+work through every relevant ISO 25010 characteristic and the alternate/error
+flows, not just the happy path. Return ONLY the JSON object.`;
+}
+
+/* ------------------------------------------------------------------ *
  * 4. CLASSIFY — match free-text requirements to catalogue archetypes (FR-CL)
  * ------------------------------------------------------------------ */
 
